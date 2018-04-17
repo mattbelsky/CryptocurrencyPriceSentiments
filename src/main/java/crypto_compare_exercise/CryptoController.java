@@ -1,6 +1,7 @@
 package crypto_compare_exercise;
 
 import crypto_compare_exercise.models.Data;
+import crypto_compare_exercise.models.GeneralResponse;
 import crypto_compare_exercise.models.PriceHistorical;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,10 +16,19 @@ public class CryptoController {
     @Autowired
     CryptoService cryptoService;
 
+    // Other possible options are:
+    //      aggregate (time period to aggregate over)
+    //      limit (number of data points to return)
+    //      toTs (last Unix timestamp to return data for)
+    // So far, these are set to a default value by the developer.
     @RequestMapping("/gethistory")
-    public ArrayList<PriceHistorical> addPriceHistorical(@RequestParam(value = "fsym") String fromCurrency,
+    public Data[] addPriceHistorical(@RequestParam(value = "fsym") String fromCurrency,
                                                          @RequestParam(value = "tsym") String toCurrency) {
-
         return cryptoService.addPriceHistorical(fromCurrency, toCurrency);
+    }
+
+    @RequestMapping("/missingvalues")
+    public ArrayList<Integer> seekMissingValues() {
+        return cryptoService.seekMissingHourValues();
     }
 }

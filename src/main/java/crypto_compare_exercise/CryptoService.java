@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.sql.Time;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,10 +19,11 @@ public class CryptoService {
     @Autowired
     CryptoMapper cryptoMapper;
 
-    public ArrayList<PriceHistorical> addPriceHistorical(String fromCurrency, String toCurrency) {
+    public Data[] addPriceHistorical(String fromCurrency, String toCurrency) {
 
         // the number of records to return, to be adjusted for calls for records/hour and records/minute
-        int numRecords = 100;
+        // min 2, returns 1+ the specified amount -- i.e. if 5, returns 6
+        int numRecords = 5;
         final int HOURS_IN_DAY = 24;
         final int MIN_IN_HOUR = 60;
 
@@ -37,6 +37,94 @@ public class CryptoService {
         String queryPriceMinute = "https://min-api.cryptocompare.com/data/histominute?fsym="
                 + fromCurrency + "&tsym=" + toCurrency + "&aggregate=1&limit=" + numRecords * HOURS_IN_DAY * MIN_IN_HOUR;
 
+        PriceHistorical phDate = restTemplate.getForObject(queryPriceDate, PriceHistorical.class);
+        PriceHistorical phHour = restTemplate.getForObject(queryPriceHour, PriceHistorical.class);
+        PriceHistorical phMinute = restTemplate.getForObject(queryPriceMinute, PriceHistorical.class);
+
+        // Adds to the data_by_date database.
+        for (int i = 0; i < phDate.getData().length; i++) {
+
+            // The Data object being acted upon.
+            Data datum = phDate.getData()[i];
+
+            // Multiplies the time integer by 1000 because it measures seconds rather than milliseconds.
+            long rawTime = (long) (datum.getTime()) * 1000;
+
+            // Isolates and splits the timestamp within each Data object into separate fields.
+            // Converts the timestamp into a LocalDateTime object, which has the methods to further split it up.
+            Timestamp timestamp = new Timestamp(rawTime);
+            LocalDateTime dateTime = timestamp.toLocalDateTime();
+
+            // Sets the date. Date is universal to all databases.
+            int day = dateTime.getDayOfMonth();
+            int month = dateTime.getMonthValue();
+            int year = dateTime.getYear();
+
+            datum.setDay(day);
+            datum.setMonth(month);
+            datum.setYear(year);
+            cryptoMapper.addPriceByDate(datum);
+        }
+
+        // Adds data to the data_by_hour database.
+        for (int i = 0; i < phHour.getData().length; i++) {
+
+            // The Data object being acted upon.
+            Data datum = phHour.getData()[i];
+
+            // Multiplies the time integer by 1000 because it measures seconds rather than milliseconds.
+            long rawTime = (long) (datum.getTime()) * 1000;
+
+            // Isolates and splits the timestamp within each Data object into separate fields.
+            // Converts the timestamp into a LocalDateTime object, which has the methods to further split it up.
+            Timestamp timestamp = new Timestamp(rawTime);
+            LocalDateTime dateTime = timestamp.toLocalDateTime();
+
+            // Sets the date and time.
+            int hour = dateTime.getHour();
+            int day = dateTime.getDayOfMonth();
+            int month = dateTime.getMonthValue();
+            int year = dateTime.getYear();
+
+            datum.setHour(hour);
+            datum.setDay(day);
+            datum.setMonth(month);
+            datum.setYear(year);
+            cryptoMapper.addPriceByHour(datum);
+        }
+
+        // Adds data to the data_by_minute database.
+        for (int i = 0; i < phMinute.getData().length; i++) {
+
+            // The Data object being acted upon.
+            Data datum = phMinute.getData()[i];
+
+            // Multiplies the time integer by 1000 because it measures seconds rather than milliseconds.
+            long rawTime = (long) (datum.getTime()) * 1000;
+
+            // Isolates and splits the timestamp within each Data object into separate fields.
+            // Converts the timestamp into a LocalDateTime object, which has the methods to further split it up.
+            Timestamp timestamp = new Timestamp(rawTime);
+            LocalDateTime dateTime = timestamp.toLocalDateTime();
+
+            // Sets the date and time.
+            int minute = dateTime.getMinute();
+            int hour = dateTime.getHour();
+            int day = dateTime.getDayOfMonth();
+            int month = dateTime.getMonthValue();
+            int year = dateTime.getYear();
+
+            datum.setMinute(minute);
+            datum.setHour(hour);
+            datum.setDay(day);
+            datum.setMonth(month);
+            datum.setYear(year);
+            cryptoMapper.addPriceByMinute(datum);
+        }
+
+        return cryptoMapper.getPriceByDate();
+
+
 //        PriceHistorical priceHistorical = restTemplate.getForObject(queryPriceDate, PriceHistorical.class);
 //        Data[] data = priceHistorical.getData();
 //
@@ -44,171 +132,345 @@ public class CryptoService {
 //            cryptoMapper.addPrices(datum);
 //        }
 
-        // Maps the results to an ArrayList of objects. They must be in this order for the rest of the code to work!
-        ArrayList<PriceHistorical> priceHistorical = new ArrayList<>();
-        priceHistorical.add(restTemplate.getForObject(queryPriceDate, PriceHistorical.class));
-        priceHistorical.add(restTemplate.getForObject(queryPriceHour, PriceHistorical.class));
-        priceHistorical.add(restTemplate.getForObject(queryPriceMinute, PriceHistorical.class));
-
-//        PriceHistorical priceHistByDate = restTemplate.getForObject(queryPriceDate, PriceHistorical.class);
-//        PriceHistorical priceHistByHour = restTemplate.getForObject(queryPriceHour, PriceHistorical.class);
-//        PriceHistorical priceHistByMinute = restTemplate.getForObject(queryPriceMinute, PriceHistorical.class);
-
-        /*  Need to isolate the Data objects within each PriceHistorical object, split the timestamp in each object into
-            separate fields and feed the objects into the the database.
-         */
-
-        // Isolates the Data objects within each of the three PriceHistorical objects and splits the timestamps in each
-        // Data object into separate fields (day, month, year, hour, & minute). Depending on whether it was queried by
-        // day, hour, or minute, each Data object will be inserted into separate database tables.
-        int size = priceHistorical.size();
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < priceHistorical.get(i).getData().length; j++) {
-
-                // the current Data object being acted on
-                Data datum = priceHistorical.get(i).getData()[j];
-
-                long msPerMin = 60 * 1000;
-                long msPerHr = 60 * msPerMin;
-                long msPerDay = 24 * msPerHr;
 
 
-                // Multiplies the time integer by 1000 because it measures seconds rather than milliseconds.
-                long rawTime = (long) (datum.getTime()) * 1000;
-//                long rawTimeTomorrow = (long) (priceHistorical.get(i).getData()[i].getTime()) * 1000;
-//                long difference = rawTimeTomorrow - rawTime;
-//                if (i == 0) {
-//                    if (difference > msPerDay) {
-//                        // How big is the gap?
-//                        // If difference > msPerDay * k...
-//                        for (int k = 1; difference > (msPerDay * k); k++) {
+//        // Maps the results to an ArrayList of objects. They must be in this order for the rest of the code to work as
+//        // upcoming code will perform specific operations based on the object's index in the ArrayList!
+//        ArrayList<PriceHistorical> priceHistorical = new ArrayList<>();
+//        priceHistorical.add(restTemplate.getForObject(queryPriceDate, PriceHistorical.class));
+//        priceHistorical.add(restTemplate.getForObject(queryPriceHour, PriceHistorical.class));
+//        priceHistorical.add(restTemplate.getForObject(queryPriceMinute, PriceHistorical.class));
 //
-//                        }
+//        // Isolates the Data objects within each of the three PriceHistorical objects and splits the timestamps in each
+//        // Data object into separate fields (day, month, year, hour, & minute). Depending on whether it was queried by
+//        // day, hour, or minute, each Data object will be inserted into separate database tables.
+//        int size = priceHistorical.size();
+//        for (int i = 0; i < size; i++) {
+//            for (int j = 0; j < priceHistorical.get(i).getData().length; j++) {
 //
-//                    }
-//                } else if (i == 1) {
-//                    if (difference > msPerHr) {
-//                        //
-//                    }
-//                } else {
-//                    if (difference > msPerMin) {
-//                        //
-//                    }
+//                // the current Data object being acted on
+//                Data datum = priceHistorical.get(i).getData()[j];
+//
+//                // Multiplies the time integer by 1000 because it measures seconds rather than milliseconds.
+//                long rawTime = (long) (datum.getTime()) * 1000;
+//
+//                // Isolates and splits the timestamp within each Data object into separate fields.
+//                // Converts the timestamp into a LocalDateTime object, which has the methods to further split it up.
+//                Timestamp timestamp = new Timestamp(rawTime);
+//                LocalDateTime dateTime = timestamp.toLocalDateTime();
+//
+//                // Sets the date. Date is universal to all databases.
+//                int day = dateTime.getDayOfMonth();
+//                int month = dateTime.getMonthValue();
+//                int year = dateTime.getYear();
+//
+//                datum.setDay(day);
+//                datum.setMonth(month);
+//                datum.setYear(year);
+//                cryptoMapper.addPriceByDate(datum);
+//
+////                // Sets the hour for the for the object to be inserted into the hourly database.
+////                if (i >= 1) {
+////                    int hour = dateTime.getHour();
+////                    datum.setHour(hour);
+////                    cryptoMapper.addPriceByHour(datum);
+////                }
+////
+////                // Sets the minute for the object to be inserted into the minutely database.
+////                if (i == 2) {
+////                    int minute = dateTime.getMinute();
+////                    datum.setMinute(minute);
+////                    cryptoMapper.addPriceByMin(datum);
+////                }
+//
+//                switch (i) {
+//                    // Sets the hour for the for the object to be inserted into the hourly database.
+//                    case 1:
+//                        int hour = dateTime.getHour();
+//                        datum.setHour(hour);
+//                        cryptoMapper.addPriceByHour(datum);
+//                    // Sets the minute for the object to be inserted into the minutely database.
+//                    case 2:
+//                        int minute = dateTime.getMinute();
+//                        datum.setMinute(minute);
+//                        cryptoMapper.addPriceByMin(datum);
 //                }
+//            }
+//        }
+//
+//        // ARE THERE MISSING VALUES???
+//
+//        return priceHistorical;
+//
+//
+//
+//    }
+    }
 
-                // Isolates and splits the timestamp within each Data object into separate fields.
-                // Converts the timestamp into a LocalDateTime object, which has the methods to further split it up.
-                Timestamp timestamp = new Timestamp(rawTime);
-                LocalDateTime dateTime = timestamp.toLocalDateTime();
+    /********************************* DATE DATABASE - FINDS & FILLS GAPS *********************************/
 
+    /********************************* DATE DATABASE - FINDS & FILLS GAPS *********************************/
+    // Checks the databases to see if there are missing values.
+    // Gets an array of all timestamps, sorts the array, and finds missing values, which are added to a new array which
+    // is then passed to a method that will query for those timestamp values and add them to the database.
+    public ArrayList<Integer> seekMissingDateValues() {
 
-                // Sets the date. Date is universal to all databases.
-                int day = dateTime.getDayOfMonth();
-                int month = dateTime.getMonthValue();
-                int year = dateTime.getYear();
-                /*  Is month < 1 or > 12?
-                    Is each month 1 less than the month after it?
-                    Is month 2 / 4, 6, 9, 11 / other?
-                    Is day < 1 or > 29 / 30/ 31?
-                    If not,
-                 */
-                datum.setDay(day);
-                datum.setMonth(month);
-                datum.setYear(year);
-                cryptoMapper.addPriceByDate(datum);
+        // Finds gaps in the data_by_dates database.
+//        Data[] dataByDate = cryptoMapper.getPriceByDate();
+        Integer[] timestampsByDate = cryptoMapper.getTimestampByDate();
+        int SECONDS_PER_DAY = 86400;
+        int difference;
+        ArrayList<Integer> missingTimestamps = new ArrayList<>();
 
-                // Sets the hour for the for the object to be inserted into the hourly database.
-                if (i >= 1) {
-                    int hour = dateTime.getHour();
-                    datum.setHour(hour);
-                    cryptoMapper.addPriceByHour(datum);
-                }
+        // Sort timestampsByDate.
+        MergeSort.mergeSort(timestampsByDate);
 
-                // Sets the minute for the object to be inserted into the minutely database.
-                if (i == 2) {
-                    int minute = dateTime.getMinute();
-                    datum.setMinute(minute);
-                    cryptoMapper.addPriceByMin(datum);
+        // Finds missing values in the timestamp array.
+        for (int i = 0; i < timestampsByDate.length - 1; i++) {
+            difference = timestampsByDate[i+1] - timestampsByDate[i];
+            int numDaysMissing = difference / SECONDS_PER_DAY;
+            if (numDaysMissing > 1) {
+
+                // Must be < numDaysMissing as this value is the next found value in the database.
+                for (int j = 1; j < numDaysMissing; j++) {
+                    missingTimestamps.add(timestampsByDate[i] + SECONDS_PER_DAY * j);
                 }
             }
         }
 
-        return priceHistorical;
+        if (missingTimestamps.size() > 0) {
+            addMissingDateValues(missingTimestamps);
+        }
 
-
-//        // Maps the URLs to arrays of objects.
-//        Data[] dataByDate = restTemplate.getForObject(queryPriceDate, Data[].class);
-//        Data[] dataByHour = restTemplate.getForObject(queryPriceHour, Data[].class);
-//        Data[] dataByMin = restTemplate.getForObject(queryPriceMinute, Data[].class);
-
-        // Separates these Data arrays into arrays of PriceByDate, PriceByHour, & PriceByMin objects.
-
-        // Declares new arrays of these object types. Must declare them null here or the following loops won't work.
-//        PriceByDate[] priceByDate = null;
-//        PriceByHour[] priceByHour = null;
-//        PriceByMin[] priceByMin = null;
-//
-//        // Initializes the arrays.
-//        for (int i = 0; i < dataByDate.length; i++) {
-//
-//            Timestamp timestamp = new Timestamp(dataByDate[i].getTime());
-//            LocalDateTime dateTime = timestamp.toLocalDateTime();
-//            int date = dateTime.getDayOfMonth() +
-//                       dateTime.getMonthValue() +
-//                       dateTime.getYear();
-//
-//            priceByDate[i].setDate(date);
-//            priceByDate[i].setClose(dataByDate[i].getClose());
-//            priceByDate[i].setHigh(dataByDate[i].getHigh());
-//            priceByDate[i].setLow(dataByDate[i].getLow());
-//            priceByDate[i].setVolumefrom(dataByDate[i].getVolumefrom());
-//            priceByDate[i].setVolumeto(dataByDate[i].getVolumeto());
-//        }
-//
-//        for (int i = 0; i < dataByHour.length; i++) {
-//
-//            Timestamp timestamp = new Timestamp(dataByDate[i].getTime());
-//            LocalDateTime dateTime = timestamp.toLocalDateTime();
-//            int date = dateTime.getDayOfMonth() +
-//                    dateTime.getMonthValue() +
-//                    dateTime.getYear();
-//            int hour = dateTime.getHour();
-//
-//            priceByHour[i].setDate(date);
-//            priceByHour[i].setHour(hour);
-//            priceByHour[i].setClose(dataByDate[i].getClose());
-//            priceByHour[i].setHigh(dataByDate[i].getHigh());
-//            priceByHour[i].setLow(dataByDate[i].getLow());
-//            priceByHour[i].setVolumefrom(dataByDate[i].getVolumefrom());
-//            priceByHour[i].setVolumeto(dataByDate[i].getVolumeto());
-//        }
-//
-//        for (int i = 0; i < dataByMin.length; i++) {
-//
-//            Timestamp timestamp = new Timestamp(dataByDate[i].getTime());
-//            LocalDateTime dateTime = timestamp.toLocalDateTime();
-//            int date = dateTime.getDayOfMonth() +
-//                    dateTime.getMonthValue() +
-//                    dateTime.getYear();
-//            int hour = dateTime.getHour();
-//            int min = dateTime.getMinute();
-//
-//            priceByDate[i].setDate(date);
-//            priceByHour[i].setHour(hour);
-//            priceByMin[i].setMin(min);
-//            priceByDate[i].setClose(dataByDate[i].getClose());
-//            priceByDate[i].setHigh(dataByDate[i].getHigh());
-//            priceByDate[i].setLow(dataByDate[i].getLow());
-//            priceByDate[i].setVolumefrom(dataByDate[i].getVolumefrom());
-//            priceByDate[i].setVolumeto(dataByDate[i].getVolumeto());
-//        }
-//
-//        // Adds the mapped objects to the database.
-//        cryptoMapper.addPriceByDate(priceByDate);
-//        cryptoMapper.addPriceByHourAndDate(priceByHour);
-//        cryptoMapper.addPriceByMinAndDate(priceByMin);
-//
-//        return cryptoMapper.getPrices();
-//    }
+        return missingTimestamps;
     }
+
+    public void addMissingDateValues(ArrayList<Integer> missingTimestamps) {
+
+        // Queries the CryptoCompareAPI to fill in the missing gaps.
+        for (Integer ts : missingTimestamps) {
+
+            String fromCurrency = "BTC";
+            String toCurrency = "USD";
+
+            String queryPriceDate = "https://min-api.cryptocompare.com/data/histoday?fsym="
+                    + fromCurrency + "&tsym=" + toCurrency + "&aggregate=1&limit=" + 1
+                    + "&toTs=" + ts;
+            PriceHistorical phDate = restTemplate.getForObject(queryPriceDate, PriceHistorical.class);
+
+            // The Data object being acted upon. Want the first one because the CryptoCompare API returns at
+            // least 2, even if the limit is set to 1.
+            Data datum = phDate.getData()[1];
+
+            // Multiplies the time integer by 1000 because it measures seconds rather than milliseconds.
+            long rawTime = (long) (datum.getTime()) * 1000;
+
+            // Isolates and splits the timestamp within each Data object into separate fields.
+            // Converts the timestamp into a LocalDateTime object, which has the methods to further split it up.
+            Timestamp timestamp = new Timestamp(rawTime);
+            LocalDateTime dateTime = timestamp.toLocalDateTime();
+
+            // Sets the date.
+            int day = dateTime.getDayOfMonth();
+            int month = dateTime.getMonthValue();
+            int year = dateTime.getYear();
+
+            datum.setDay(day);
+            datum.setMonth(month);
+            datum.setYear(year);
+
+            // Adds the data to the database.
+            cryptoMapper.addPriceByDate(datum);
+        }
+    }
+
+    /********************************* HOUR DATABASE - FINDS & FILLS GAPS *********************************/
+    // Checks the databases to see if there are missing values.
+    // Gets an array of all timestamps, sorts the array, and finds missing values, which are added to a new array which
+    // is then passed to a method that will query for those timestamp values and add them to the database.
+    public ArrayList<Integer> seekMissingHourValues() {
+
+        // Finds gaps in the data_by_dates database.
+//        Data[] dataByDate = cryptoMapper.getPriceByDate();
+        Integer[] timestampsByHour = cryptoMapper.getTimestampByHour();
+        int SECONDS_PER_HOUR = 3600;
+        int difference;
+        ArrayList<Integer> missingTimestamps = new ArrayList<>();
+
+        // Sort timestampsByDate.
+        MergeSort.mergeSort(timestampsByHour);
+
+        // Finds missing values in the timestamp array.
+        for (int i = 0; i < timestampsByHour.length - 1; i++) {
+            difference = timestampsByHour[i+1] - timestampsByHour[i];
+            int numDaysMissing = difference / SECONDS_PER_HOUR;
+            if (numDaysMissing > 1) {
+
+                // Must be < numDaysMissing as this value is the next found value in the database.
+                for (int j = 1; j < numDaysMissing; j++) {
+                    missingTimestamps.add(timestampsByHour[i] + SECONDS_PER_HOUR * j);
+                }
+            }
+        }
+
+        if (missingTimestamps.size() > 0) {
+            addMissingHourValues(missingTimestamps);
+        }
+
+        return missingTimestamps;
+    }
+
+    public void addMissingHourValues(ArrayList<Integer> missingTimestamps) {
+
+        // Queries the CryptoCompareAPI to fill in the missing gaps.
+        for (Integer ts : missingTimestamps) {
+
+            String fromCurrency = "BTC";
+            String toCurrency = "USD";
+
+            String queryPriceHour = "https://min-api.cryptocompare.com/data/histohour?fsym="
+                    + fromCurrency + "&tsym=" + toCurrency + "&aggregate=1&limit=" + 1
+                    + "&toTs=" + ts;
+            PriceHistorical phHour = restTemplate.getForObject(queryPriceHour, PriceHistorical.class);
+
+            // The Data object being acted upon. Want the first one because the CryptoCompare API returns at
+            // least 2, even if the limit is set to 1.
+            Data datum = phHour.getData()[1];
+
+            // Multiplies the time integer by 1000 because it measures seconds rather than milliseconds.
+            long rawTime = (long) (datum.getTime()) * 1000;
+
+            // Isolates and splits the timestamp within each Data object into separate fields.
+            // Converts the timestamp into a LocalDateTime object, which has the methods to further split it up.
+            Timestamp timestamp = new Timestamp(rawTime);
+            LocalDateTime dateTime = timestamp.toLocalDateTime();
+
+            // Sets the date.
+            int hour = dateTime.getHour();
+            int day = dateTime.getDayOfMonth();
+            int month = dateTime.getMonthValue();
+            int year = dateTime.getYear();
+
+            datum.setHour(hour);
+            datum.setDay(day);
+            datum.setMonth(month);
+            datum.setYear(year);
+
+            // Adds the data to the database.
+            cryptoMapper.addPriceByHour(datum);
+        }
+    }
+
+    /********************************* DATE DATABASE - FINDS & FILLS GAPS *********************************/
+    // Checks the databases to see if there are missing values.
+    // Gets an array of all timestamps, sorts the array, and finds missing values, which are added to a new array which
+    // is then passed to a method that will query for those timestamp values and add them to the database.
+    public ArrayList<Integer> seekMissingMinuteValues() {
+
+        // Finds gaps in the data_by_dates database.
+//        Data[] dataByDate = cryptoMapper.getPriceByDate();
+        Integer[] timestampsByMinute = cryptoMapper.getTimestampByMinute();
+        int SECONDS_PER_MINUTE = 60;
+        int difference;
+        ArrayList<Integer> missingTimestamps = new ArrayList<>();
+
+        // Sort timestampsByDate.
+        MergeSort.mergeSort(timestampsByMinute);
+
+        // Finds missing values in the timestamp array.
+        for (int i = 0; i < timestampsByMinute.length - 1; i++) {
+            difference = timestampsByMinute[i+1] - timestampsByMinute[i];
+            int numDaysMissing = difference / SECONDS_PER_MINUTE;
+            if (numDaysMissing > 1) {
+
+                // Must be < numDaysMissing as this value is the next found value in the database.
+                for (int j = 1; j < numDaysMissing; j++) {
+                    missingTimestamps.add(timestampsByMinute[i] + SECONDS_PER_MINUTE * j);
+                }
+            }
+        }
+
+        if (missingTimestamps.size() > 0) {
+            addMissingMinuteValues(missingTimestamps);
+        }
+
+        return missingTimestamps;
+    }
+
+    public void addMissingMinuteValues(ArrayList<Integer> missingTimestamps) {
+
+        // Queries the CryptoCompareAPI to fill in the missing gaps.
+        for (Integer ts : missingTimestamps) {
+
+            String fromCurrency = "BTC";
+            String toCurrency = "USD";
+
+            String queryPriceMinute = "https://min-api.cryptocompare.com/data/histominute?fsym="
+                    + fromCurrency + "&tsym=" + toCurrency + "&aggregate=1&limit=" + 1
+                    + "&toTs=" + ts;
+            PriceHistorical phMinute = restTemplate.getForObject(queryPriceMinute, PriceHistorical.class);
+
+            // The Data object being acted upon. Want the first one because the CryptoCompare API returns at
+            // least 2, even if the limit is set to 1.
+            Data datum = phMinute.getData()[1];
+
+            // Multiplies the time integer by 1000 because it measures seconds rather than milliseconds.
+            long rawTime = (long) (datum.getTime()) * 1000;
+
+            // Isolates and splits the timestamp within each Data object into separate fields.
+            // Converts the timestamp into a LocalDateTime object, which has the methods to further split it up.
+            Timestamp timestamp = new Timestamp(rawTime);
+            LocalDateTime dateTime = timestamp.toLocalDateTime();
+
+            // Sets the minute.
+            int minute = dateTime.getMinute();
+            int hour = dateTime.getHour();
+            int day = dateTime.getDayOfMonth();
+            int month = dateTime.getMonthValue();
+            int year = dateTime.getYear();
+
+            datum.setMinute(minute);
+            datum.setHour(hour);
+            datum.setDay(day);
+            datum.setMonth(month);
+            datum.setYear(year);
+
+            // Adds the data to the database.
+            cryptoMapper.addPriceByMinute(datum);
+        }
+    }
+
+
+    // Searches each database for gaps in the data.
+//    public void findGaps() {
+//        int msPerMin = 60 * 1000;
+//        int msPerHour = 60 * msPerMin;
+//        int msPerDay = 24 * msPerHour;
+//
+//        ArrayList<PriceHistorical> priceHistorical = new ArrayList();
+////        int size = priceHistorical.size();
+//        for (int i = 0; i < 3; i++) {
+//            PriceHistorical element = userMapper.getAllByDate();
+//            priceHistorical.add(element);
+//            for (int j = 0; j < element.get(i).getData().length; j++) {
+//
+//            }
+/*
+            for each database, call a cryptoMapper method find all, add to a PriceHistorical object.
+
+            for data_by_date database, a for loop iterates through each Data object beginning with i = 1
+                difference = timestamp[i] - timestamp[i-1] // measures the difference between the current timestamp and the previous
+                if (difference > msPerDay) // if the difference is greater than one day
+                    daysMissing = difference / msPerDay // how many days are missing?
+                    limit = daysMissing // the parameter to request the number of data points to return
+                    toTs = timestamp[i] - msPerDay; // the last datapoint to return is the one day before the current timestamp
+                    call a method that performs the query for data_by_date and inserts into our database
+
+
+            for data by hour database
+                for each day
+                    if
+            for data by min database
+         */
+//    }
 }
