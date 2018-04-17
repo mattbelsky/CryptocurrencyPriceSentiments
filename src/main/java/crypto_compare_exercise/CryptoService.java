@@ -207,7 +207,10 @@ public class CryptoService {
 //    }
     }
 
-    /********************************* DATE DATABASE - FINDS & FILLS GAPS *********************************/
+    /********************************* 3 SETS OF METHODS THAT FIND & FILL GAPS *********************************/
+    /*  Currently separated by the data they are referencing (by date, by hour, and by minute) for debugging purposes.
+        Daily, hourly, and minutely data are inserted into separate databases.
+     */
 
     /********************************* DATE DATABASE - FINDS & FILLS GAPS *********************************/
     // Checks the databases to see if there are missing values.
