@@ -300,9 +300,6 @@ public class CryptoService {
         int difference;
         ArrayList<Integer> missingTimestamps = new ArrayList<>();
 
-        // Sort timestampsByDate.
-        MergeSort.mergeSort(timestampsByHour);
-
         // Finds missing values in the timestamp array.
         for (int i = 0; i < timestampsByHour.length - 1; i++) {
             difference = timestampsByHour[i+1] - timestampsByHour[i];
@@ -364,7 +361,7 @@ public class CryptoService {
         }
     }
 
-    /********************************* DATE DATABASE - FINDS & FILLS GAPS *********************************/
+    /********************************* MINUTE DATABASE - FINDS & FILLS GAPS *********************************/
     // Checks the databases to see if there are missing values.
     // Gets an array of all timestamps, sorts the array, and finds missing values, which are added to a new array which
     // is then passed to a method that will query for those timestamp values and add them to the database.
@@ -376,9 +373,6 @@ public class CryptoService {
         int SECONDS_PER_MINUTE = 60;
         int difference;
         ArrayList<Integer> missingTimestamps = new ArrayList<>();
-
-        // Sort timestampsByDate.
-        MergeSort.mergeSort(timestampsByMinute);
 
         // Finds missing values in the timestamp array.
         for (int i = 0; i < timestampsByMinute.length - 1; i++) {

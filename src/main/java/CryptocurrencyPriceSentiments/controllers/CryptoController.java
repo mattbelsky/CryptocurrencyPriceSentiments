@@ -1,8 +1,7 @@
-package crypto_compare_exercise;
+package crypto_compare_exercise.controllers;
 
 import crypto_compare_exercise.models.Data;
-import crypto_compare_exercise.models.GeneralResponse;
-import crypto_compare_exercise.models.PriceHistorical;
+import crypto_compare_exercise.services.CryptoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -29,6 +28,6 @@ public class CryptoController {
 
     @RequestMapping("/missingvalues")
     public ArrayList<Integer> seekMissingValues() {
-        return cryptoService.seekMissingHourValues();
+        return cryptoService.seekMissingMinuteValues();
     }
 }
