@@ -1,4 +1,4 @@
-package crypto_compare_exercise;
+package CryptocurrencyPriceSentiments;
 
 public class MergeSort {
 

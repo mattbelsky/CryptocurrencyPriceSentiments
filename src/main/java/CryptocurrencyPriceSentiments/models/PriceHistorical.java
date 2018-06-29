@@ -1,4 +1,4 @@
-package crypto_compare_exercise.models;
+package CryptocurrencyPriceSentiments.models;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

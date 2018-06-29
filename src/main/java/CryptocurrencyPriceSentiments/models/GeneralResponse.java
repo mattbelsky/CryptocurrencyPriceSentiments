@@ -1,14 +1,21 @@
-package crypto_compare_exercise.models;
+package CryptocurrencyPriceSentiments.models;
+
+import org.springframework.http.HttpStatus;
 
 public class GeneralResponse {
 
+    HttpStatus httpStatus;
     String message;
+    Object obj;
 
-    public String getMessage() {
-        return message;
+    public GeneralResponse(HttpStatus httpStatus, String message, Object obj) {
+        this.httpStatus = httpStatus;
+        this.message = message;
+        this.obj = obj;
     }
 
-    public void setMessage(String message) {
+    public GeneralResponse(HttpStatus httpStatus, String message) {
+        this.httpStatus = httpStatus;
         this.message = message;
     }
 }

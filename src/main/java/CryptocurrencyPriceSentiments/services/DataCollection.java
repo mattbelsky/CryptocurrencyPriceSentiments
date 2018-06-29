@@ -1,47 +1,35 @@
 package CryptocurrencyPriceSentiments.services;
 
+import CryptocurrencyPriceSentiments.CryptoMapper;
+import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
+import CryptocurrencyPriceSentiments.models.Data;
+import CryptocurrencyPriceSentiments.models.GeneralResponse;
+import CryptocurrencyPriceSentiments.models.PriceHistorical;
+import CryptocurrencyPriceSentiments.models.news.News;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.task.TaskExecutor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 @Service
-public class DataCollection
-{
+public class DataCollection {
 
     @Autowired
     RestTemplate restTemplate;
 
     @Autowired
-    CryptoMapper cryptoMapper;
-
-    @Autowired
     ScheduledTasks scheduledTasks;
 
     @Autowired
-    private TaskExecutor taskExecutor;
+    CryptoMapper cryptoMapper;
 
-    // The list of trading pairs
-    private static String[][] tradingPairs = {
-            {"ETH", "BTC"},
-            {"BCH", "BTC"},
-            {"LTC", "BTC"},
-            {"XRP", "BTC"}
-    };
-
-    // The list of exchanges
-    private static String[] exchanges = {
-            "Binance",
-            "Bitstamp",
-            "Bittrex",
-            "Kraken",
-            "Coinbase"
-    };
+    Logger logger = LoggerFactory.getLogger(this.getClass());
 
     // The time periods to query for
     private static String[] periods = {
@@ -55,83 +43,17 @@ public class DataCollection
     final static int SEC_IN_MIN = 60;
 
     /**
-     * Loads a specified number of records from the CryptoCompare API into the database by period. This is potentially
-     * a very long-running task, so, while it returns a response containing the data currently available in the database,
-     * the task continues executing in the background.
-     * @param period the time period to backload for -- corresponds to a database table
-     * @param numRecords the number of records to backload
-     * @return a response object containing the data already extant in the database
+     * Gets a list of currency pairs being traded.
+     * @return
      */
-    public GeneralResponse backloadData(String period, int numRecords) {
+    @Cacheable(value = "TradingPairs")
+    public String[] getTradingPairs() {
 
-        // As the CryptoCompare API calls take some time, this is executed as a background task in a new thread.
-        taskExecutor.execute(new Runnable() {
-
-            @Override
-            public void run() {
-
-                // Cycles through each trading pair.
-                for (String[] pair : tradingPairs) {
-
-                    // Cycles through each exchange.
-                    for (String exchange : exchanges) {
-
-                        // Skips Coinbase for the XRP/BTC pair.
-                        if ((pair[0].equals("XRP") || pair[1].equals("XRP"))
-                                && exchange.equals("Coinbase")) continue;
-
-                        /*  if (query count(id)) >= numRecords
-                                continue
-                            else is count(id) < numRecords?
-                                what is the last timestamp where count(id) = numRecords? (last)
-                                for (i = 1; i <= numRecords - count(id); i++)
-                                    add i * last * secsInPeriod to an arraylist
-                                query for missing historcal data
-                         */
-
-                        // Queries by the period specified in the method signature if the number of time periods exceeds
-                        // the number of records for this particular period, pair, and exchange in the database.
-
-                        // Timestamps to query for
-                        ArrayList<Integer> missingTimestamps = new ArrayList<>();
-
-                        // The number of records in the database for this period, pair, and exchange.
-                        int countRecords = countRecordsByPeriod(period, pair[0], pair[1], exchange);
-
-                        // Checks if the number of records in the database exceeds the number of records requested.
-                        if (countRecords >= numRecords) continue;
-                        else {
-
-                            // Gets the last timestamp in the database table.
-                            int lastTimestamp = getLastTimestampByPeriod(period, pair[0], pair[1], exchange);
-
-                            // The difference between the number of records requested and the number of records in the DB.
-                            int diffNumRecords = numRecords - countRecords;
-
-                            // Adds the timestamps for the net number of requested records for an array list.
-                            for (int i = 1; i <= diffNumRecords; i++) {
-
-                                int missingTimestamp = lastTimestamp - i * getPeriodLength(period);
-                                missingTimestamps.add(missingTimestamp);
-                            }
-                        }
-
-                        // Queries for the missing timestamps, adds the results to the database.
-                        queryMissingHistoricalData(missingTimestamps, period, pair[0], pair[1], exchange);
-
-                        // Clears the array list of missing timestamps.
-                        missingTimestamps.clear();
-
-                        // Finds and fills any gaps in the data.
-                        findHistoricalGaps(period, pair[0], pair[1], exchange);
-                    }
-                }
-            }
-        });
-
-        return new GeneralResponse(HttpStatus.OK, "Loading into the database. This is the data currently available.",
-                getResponseData());
+        String[] tradingPairs = cryptoMapper.getCurrencyPairs();
+        return tradingPairs;
     }
+
+
 
     /**
      * Executes the appropriate tasks depending on which cron job has just run.
@@ -140,40 +62,38 @@ public class DataCollection
      */
     public GeneralResponse switchCronOps(String period) {
 
-        // Queries for historical data for each trading pair from each exchange.
-        // NOTE: Coinbase does not support XRP/BTC, so it is skipped for this pair.
+        String[] tradingPairs = getTradingPairs();
+        ArrayList<Integer> timestampsDaily = scheduledTasks.getTimestampDaily();
+        ArrayList<Integer> timestampsHourly = scheduledTasks.getTimestampHourly();
+        ArrayList<Integer> timestampsMinutely = scheduledTasks.getTimestampMinutely();
+        ArrayList<Integer> timestamps = new ArrayList<>();
 
         // Cycles through each trading pair.
-        for (String[] pair : tradingPairs) {
+        for (String pair : tradingPairs) {
 
-            // Cycles through each exchange.
-            for (String exchange : exchanges) {
+            String from = pair.substring(0, pair.indexOf("/"));
+            String to = pair.substring(pair.indexOf("/") + 1);
 
-                // Skips Coinbase for the XRP/BTC pair.
-                if ((pair[0].equals("XRP") || pair[1].equals("XRP"))
-                        && exchange.equals("Coinbase")) continue;
-
-//                if (scheduledTasks.isCronHit() == true) {
-
-                switch (period) {
-                    case "week":
-                        aggregateWeekly(pair[0], pair[1], exchange);
-                        continue;
-                    case "day":
-                        queryMissingHistoricalData(scheduledTasks.getTimestampDaily(), period, pair[0], pair[1], exchange);
-                        continue;
-                    case "hour":
-                        queryMissingHistoricalData(scheduledTasks.getTimestampHourly(), period, pair[0], pair[1], exchange);
-                        continue;
-                    case "minute":
-                        queryMissingHistoricalData(scheduledTasks.getTimestampMinutely(), period, pair[0], pair[1], exchange);
-                        continue;
-                }
-//                }
+            switch (period) {
+                case "day":
+                    queryMissingHistoricalData(timestampsDaily, period, from, to);
+                    timestamps = timestampsDaily;
+                    continue;
+                case "hour":
+                    queryMissingHistoricalData(timestampsHourly, period, from, to);
+                    timestamps = timestampsHourly;
+                    continue;
+                case "minute":
+                    queryMissingHistoricalData(timestampsMinutely, period, from, to);
+                    timestamps = timestampsMinutely;
+                    continue;
             }
         }
 
-        return new GeneralResponse(HttpStatus.OK, "Data successfully added.", getResponseData());
+        ArrayList<Data[]> responseData = getResponseData(period, timestamps);
+        logger.info("Data successfully added.", responseData);
+
+        return new GeneralResponse(HttpStatus.OK, "Data successfully added.", responseData);
     }
 
     /**
@@ -181,15 +101,13 @@ public class DataCollection
      * @param period the time period to query for
      * @param fromCurrency
      * @param toCurrency
-     * @param exchange
      * @param numRecords the number of records to query for
      */
-    public void queryHistoricalData(String period, String fromCurrency, String toCurrency, String exchange, int numRecords) {
+    public void queryHistoricalData(String period, String fromCurrency, String toCurrency, int numRecords) {
 
         String query = "https://min-api.cryptocompare.com/data/histo" + period + "?" +
                 "fsym=" + fromCurrency +
                 "&tsym=" + toCurrency +
-                "&e=" + exchange +
                 "&aggregate=1&limit=" + numRecords;
 
         PriceHistorical historicalData = restTemplate.getForObject(query, PriceHistorical.class);
@@ -203,7 +121,7 @@ public class DataCollection
             Data data = historicalData.getData()[i];
 
             // Adds the data to the database.
-            addHistoricalData(data, period, fromCurrency, toCurrency, exchange);
+            addHistoricalData(data, period, fromCurrency, toCurrency);
         }
     }
 
@@ -213,17 +131,15 @@ public class DataCollection
      * @param period
      * @param fromCurrency
      * @param toCurrency
-     * @param exchange
      */
     public void queryMissingHistoricalData(ArrayList<Integer> missingTimestamps, String period, String fromCurrency,
-                                           String toCurrency, String exchange) {
+                                           String toCurrency) {
 
         for (Integer timestamp : missingTimestamps) {
 
             String query = "https://min-api.cryptocompare.com/data/histo" + period + "?" +
                     "fsym=" + fromCurrency +
                     "&tsym=" + toCurrency +
-                    "&e=" + exchange +
                     "&toTs=" + timestamp +
                     "&aggregate=1&limit=1";
             PriceHistorical historicalData = restTemplate.getForObject(query, PriceHistorical.class);
@@ -233,7 +149,7 @@ public class DataCollection
             Data data = historicalData.getData()[1];
 
             // Adds the data to the database.
-            addHistoricalData(data, period, fromCurrency, toCurrency, exchange);
+            addHistoricalData(data, period, fromCurrency, toCurrency);
         }
     }
 
@@ -243,26 +159,20 @@ public class DataCollection
      * @param period the time period to query for
      * @param fromCurrency
      * @param toCurrency
-     * @param exchange
      */
-    public void addHistoricalData(Data data, String period, String fromCurrency, String toCurrency, String exchange) {
+    public void addHistoricalData(Data data, String period, String fromCurrency, String toCurrency) {
+
+        Timestamp ts = new Timestamp(data.getTime());
+        String time = ts.toString();
 
         // Adds the pair names to the Data object.
         data.setFromCurrency(fromCurrency);
         data.setToCurrency(toCurrency);
 
-        // Adds the exchange name to the Data object.
-        data.setExchange(exchange);
-
-        // Adds the average trading price to the Data object.
-        BigDecimal high = data.getHigh();
-        BigDecimal low = data.getLow();
-        data.setAverage(averagePriceHistorical(high, low));
-
         // Adds the historical data depending on the time period.
-        if (period.equals("day")) cryptoMapper.addPriceDaily(data);
-        else if (period.equals("hour")) cryptoMapper.addPriceHourly(data);
-        else if (period.equals("minute")) cryptoMapper.addPriceMinutely(data);
+        if (period.equals("day")) cryptoMapper.addPriceByDate(data);
+        else if (period.equals("hour")) cryptoMapper.addPriceByHour(data);
+        else if (period.equals("minute")) cryptoMapper.addPriceByMinute(data);
     }
 
     /**
@@ -270,16 +180,15 @@ public class DataCollection
      * @param period the time period to query for
      * @param fromCurrency
      * @param toCurrency
-     * @param exchange
      */
-    public void findHistoricalGaps(String period, String fromCurrency, String toCurrency, String exchange) {
+    public void findHistoricalGaps(String period, String fromCurrency, String toCurrency) throws Exception {
 
         // The array list of missing timestamps, if any
         ArrayList<Integer> missingTimestamps = new ArrayList<>();
         int periodLength;
 
         // Gets an array of timestamps depending on the pair/exchange combination.
-        Integer[] timestamps = getTimestampsByPeriod(period, fromCurrency, toCurrency, exchange);
+        Integer[] timestamps = getTimestampsByPeriod(period, fromCurrency, toCurrency);
 
         periodLength = getPeriodLength(period);
 
@@ -302,216 +211,7 @@ public class DataCollection
 
         // Adds the missing data to the proper table.
         if (missingTimestamps.size() > 0) queryMissingHistoricalData(missingTimestamps, period, fromCurrency,
-                toCurrency, exchange);
-    }
-
-    // Finds gaps in database where CryptoCompare has rows but only zero-value data for the Binance exchange.
-    public GeneralResponse findHistoricalGapsBinance(String period, String fromCurrency, String toCurrency) {
-
-        // The array of data objects containing no CryptoCompare data
-        Data[] missing;
-
-        int periodLength = 0;
-
-        if (period.equals("day")) missing = cryptoMapper.getMissingDailyBinance(fromCurrency, toCurrency);
-        else if (period.equals("hour")) missing = cryptoMapper.getMissingHourlyBinance(fromCurrency, toCurrency);
-        else if (period.equals("minute")) missing =  cryptoMapper.getMissingMinutelyBinance(fromCurrency, toCurrency);
-
-        switch (period) {
-
-            case "day":
-                missing = cryptoMapper.getMissingDailyBinance(fromCurrency, toCurrency);
-                periodLength = getPeriodLength(period);
-                break;
-            case "hour":
-                missing = cryptoMapper.getMissingHourlyBinance(fromCurrency, toCurrency);
-                periodLength = getPeriodLength(period);
-                break;
-            default:
-                missing = cryptoMapper.getMissingMinutelyBinance(fromCurrency, toCurrency);
-                periodLength = getPeriodLength(period);
-        }
-
-        /*  int start = 0;
-            cycle through timestamps from i = 1 until i = missing.length - 1 (to find gaps larger than the current period between them)
-                if missing[i] - missing[i-1] > length of period
-                    updateHistBinance(period, Arrays.copyOfRange(missing, start, i)
-                    start = i
-                if i = missing.length - 2
-                    updateHistBinance(period, missing)
-
-         */
-
-        // In case the missing timestamps are not sequential, breaks them into sequential bits, and feeds them to the
-        // method that gets the data. Doing this should reduce the number of calls to the Binance API.
-        int start = 0;
-
-        for (int i = 1; i < missing.length - 1; i++) {
-
-            // Detects breaks in a sequential series of timestamps and sends the latest detected sequential bit of the
-            // array to a new method.
-            if (missing[i].getTime() - missing[i - 1].getTime() > getPeriodLength(period)) {
-
-                updateHistDataBinance(period, Arrays.copyOfRange(missing, start, i));
-                start = i;
-            }
-
-            if (i == missing.length - 2) updateHistDataBinance(period, missing);
-        }
-
-        return new GeneralResponse(HttpStatus.OK, "Query successful.", getResponseData());
-    }
-
-    // Fills gaps in database where CryptoCompare has no historical data for the Binance exchange.
-    public GeneralResponse updateHistDataBinance(String period, Data[] missing) {
-
-        /*  get timestamps from data[]
-
-            fromToCurrencies = from + to
-            candlestick interval should depend on the time period
-            fromTime = (first timestamp - secInPeriod) * 1000 + 1L
-            toTime = last timestamp * 1000L
-            candlesticks = client.getcandlestickbars...
-         */
-        String fromToCurrencies = missing[0].getFromCurrency() + missing[0].getToCurrency();
-        long fromTime = (missing[0].getTime() - getPeriodLength(period)) * 1000 + 1l;
-        long toTime = missing[missing.length - 1].getTime() * 1000l;
-        List<Candlestick> candlesticks = new ArrayList<>();
-
-        // Connect to exchange
-        BinanceApiRestClient client = binanceUtil.createExchange();
-
-        // Specific candlestick bar
-        switch (period) {
-            case "day":
-                candlesticks = client.getCandlestickBars(
-                        fromToCurrencies, CandlestickInterval.DAILY,500, fromTime, toTime);
-                break;
-            case "hour":
-                candlesticks = client.getCandlestickBars(
-                        fromToCurrencies, CandlestickInterval.HOURLY,500, fromTime, toTime);
-                break;
-            default:
-                candlesticks = client.getCandlestickBars(
-                        fromToCurrencies, CandlestickInterval.ONE_MINUTE,500, fromTime, toTime);
-        }
-
-        /*  for (int i = 0; i < candlesticks.size(); i++)
-                Data entry = new Data();
-                entry.setTime(missing[i].getTime())
-                entry.setFromCurrency(missing[i].fromCurrency())
-                entry.setToCurrency(missing[i].toCurrency())
-                entry.setExchange(missing[i].getExchange())
-                entry.setOpen(candlesticks.get(i).getOpen()
-                entry.setClose(candlesticks.get(i).getClose()
-                low, high
-                entry.setAverage(averagePriceHistorical(high, low)
-                entry.setVolumeFrom(
-                entry.setVolumeTo(
-
-                switch period
-                    cryptoMapper.updateDataDaily(entry)
-                    ...
-         */
-        // Maps each candlestick object to a data object which will be used to update the database.
-        // What if missing and candlesticks are different sizes?
-        for (int i = 0; i < candlesticks.size(); i++) {
-
-            Data entry = new Data();
-            Candlestick stick = candlesticks.get(i);
-
-            entry.setOpen(Double.parseDouble(stick.getOpen()));
-            entry.setClose(Double.parseDouble(stick.getClose()));
-            entry.setHigh(Double.parseDouble(stick.getHigh()));
-            entry.setClose(Double.parseDouble(stick.getClose()));
-            entry.setAverage(averagePriceHistorical(missing[i].getHigh(), missing[i].getLow()));
-            // volumefrom & to?
-
-            switch (period) {
-                case "day":
-                    cryptoMapper.updateDataDaily(missing[i].getTime(), entry);
-                    break;
-                case "hour":
-                    cryptoMapper.updateDataHourly(missing[i].getTime(), entry);
-                    break;
-                default:
-                    cryptoMapper.updateDataMinutely(missing[i].getTime(), entry);
-            }
-        }
-
-        return new GeneralResponse(HttpStatus.OK, "Query successful.", cryptoMapper.getPriceDaily());
-    }
-
-
-    /**
-     * Averages the high and low price.
-     * @param high the highest trading price for a particular time interval
-     * @param low the lowest trading price for a particular time interval
-     * @return the average of the high and low
-     */
-    public BigDecimal averagePriceHistorical(BigDecimal high, BigDecimal low) {
-
-        BigDecimal average;
-        BigDecimal sum;
-        BigDecimal divisor = BigDecimal.valueOf(2.0);
-
-        sum = high.add(low);
-        average = sum.divide(divisor);
-
-        return average;
-    }
-
-    /**
-     * Aggregates daily data into weekly data.
-     * @param fromCurrency
-     * @param toCurrency
-     * @param exchange
-     */
-    public void aggregateWeekly(String fromCurrency, String toCurrency, String exchange) {
-
-        int weeklyTimestamp = scheduledTasks.getTimestampWeekly();
-        int secInWeek = SEC_IN_MIN * MIN_IN_HOUR * HOURS_IN_DAY * 7;
-
-        cryptoMapper.aggregateWeekly(weeklyTimestamp - secInWeek, weeklyTimestamp, fromCurrency, toCurrency, exchange);
-    }
-
-    /**
-     * Adds social data.
-     * @return a response object containing social media data
-     */
-    public GeneralResponse addSocial() {
-
-        int time = (int) (System.currentTimeMillis() / 1000);
-        int[] currencyIds = {7605, 202330, 3808, 5031};
-
-        for (int i = 0; i < currencyIds.length; i++) {
-            String query = "https://www.cryptocompare.com/api/data/socialstats/?id=" + currencyIds[i];
-            SocialStats social = restTemplate.getForObject(query, SocialStats.class);
-
-            Twitter twitterStats = social.getData().getTwitter();
-            Reddit redditStats = social.getData().getReddit();
-            Facebook facebookStats = social.getData().getFacebook();
-
-            twitterStats.setCurrency(tradingPairs[i][0]);
-            twitterStats.setTime(time);
-
-            redditStats.setCurrency(tradingPairs[i][0]);
-            redditStats.setTime(time);
-
-            facebookStats.setCurrency(tradingPairs[i][0]);
-            facebookStats.setTime(time);
-
-            cryptoMapper.addTwitter(twitterStats);
-            cryptoMapper.addReddit(redditStats);
-            cryptoMapper.addFacebook(facebookStats);
-        }
-
-        SocialResponse socialResponse = new SocialResponse();
-        socialResponse.setTwitter(cryptoMapper.getTwitter());
-        socialResponse.setReddit(cryptoMapper.getReddit());
-        socialResponse.setFacebook(cryptoMapper.getFacebook());
-
-        return new GeneralResponse(HttpStatus.OK, "Social media data successfully added.", socialResponse);
+                toCurrency);
     }
 
     /**
@@ -519,19 +219,12 @@ public class DataCollection
      * @param period the time period to query for
      * @param fromCurrency
      * @param toCurrency
-     * @param exchange
      * @return the number of records in the database for the specified combination of parameters
      */
-    public int countRecordsByPeriod(String period, String fromCurrency, String toCurrency, String exchange) {
+    public int countRecordsByPeriod(String period, String fromCurrency, String toCurrency) throws Exception {
 
-        switch(period) {
-            case "day":
-                return cryptoMapper.countRecordsDaily(fromCurrency, toCurrency, exchange);
-            case "hour":
-                return cryptoMapper.countRecordsHourly(fromCurrency, toCurrency, exchange);
-            default:
-                return cryptoMapper.countRecordsMinutely(fromCurrency, toCurrency, exchange);
-        }
+        if (!"datehourminute".contains(period)) throw new Exception();
+        return cryptoMapper.countRecordsByPeriod(period, fromCurrency, toCurrency);
     }
 
     /**
@@ -539,19 +232,12 @@ public class DataCollection
      * @param period the time period to query for
      * @param fromCurrency
      * @param toCurrency
-     * @param exchange
      * @return the latest timestamp
      */
-    public int getLastTimestampByPeriod(String period, String fromCurrency, String toCurrency, String exchange) {
+    public int getLastTimestampByPeriod(String period, String fromCurrency, String toCurrency) throws Exception {
 
-        switch(period) {
-            case "day":
-                return cryptoMapper.getLastTimestampDaily(fromCurrency, toCurrency, exchange);
-            case "hour":
-                return cryptoMapper.getLastTimestampHourly(fromCurrency, toCurrency, exchange);
-            default:
-                return cryptoMapper.getLastTimestampMinutely(fromCurrency, toCurrency, exchange);
-        }
+        if (!"datehourminute".contains(period)) throw new Exception();
+        return cryptoMapper.getLastTimestamp(period, fromCurrency, toCurrency);
     }
 
     /**
@@ -564,9 +250,9 @@ public class DataCollection
         // Maps even if categories is empty or nonsense.
         String query = "https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=" + categories;
         News news = restTemplate.getForObject(query, News.class);
-        komodocrypto.model.cryptocompare.news.Data[] newsData = news.getData();
+        CryptocurrencyPriceSentiments.models.news.Data[] newsData = news.getData();
 
-        for (komodocrypto.model.cryptocompare.news.Data story : newsData) {
+        for (CryptocurrencyPriceSentiments.models.news.Data story : newsData) {
             cryptoMapper.addNews(story);
         }
 
@@ -584,11 +270,11 @@ public class DataCollection
         // Throws an exception if the news table is empty.
         if (cryptoMapper.getNews().length == 0) {
 
-            throw new TableEmptyException(204, "No data found");
+            throw new TableEmptyException(HttpStatus.NO_CONTENT, "No data found");
 
         } else /*if (categories == null)*/{
 
-            komodocrypto.model.cryptocompare.news.Data[] newsData = cryptoMapper.getNews();
+            CryptocurrencyPriceSentiments.models.news.Data[] newsData = cryptoMapper.getNews();
             return new GeneralResponse(HttpStatus.OK, "News data successfully queried.", newsData);
 //        } else {
 //
@@ -615,45 +301,17 @@ public class DataCollection
         }
     }
 
-
-    /**
-     * Gets an array of historical data depending on the pair/exchange combination.
-     * @param period the time period to query for
-     * @param fromCurrency
-     * @param toCurrency
-     * @param exchange
-     * @return an array of objects that map to the database containing historical price data
-     */
-    public Data[] getDataByPeriodConditional(String period, String fromCurrency, String toCurrency, String exchange) {
-
-        switch (period) {
-            case "day":
-                return cryptoMapper.getPriceDailyConditional(fromCurrency, toCurrency, exchange);
-            case "hour":
-                return cryptoMapper.getPriceHourlyConditional(fromCurrency, toCurrency, exchange);
-            default:
-                return cryptoMapper.getPriceMinutelyConditional(fromCurrency, toCurrency, exchange);
-        }
-    }
-
     /**
      * Gets an array of timestamps depending on the pair/exchange combination.
      * @param period the time period to query for
      * @param fromCurrency
      * @param toCurrency
-     * @param exchange
      * @return an array of timestamps
      */
-    public Integer[] getTimestampsByPeriod(String period, String fromCurrency, String toCurrency, String exchange) {
+    public Integer[] getTimestampsByPeriod(String period, String fromCurrency, String toCurrency) throws Exception {
 
-        switch (period) {
-            case "day":
-                return cryptoMapper.getTimeDaily(fromCurrency, toCurrency, exchange);
-            case "hour":
-                return cryptoMapper.getTimeHourly(fromCurrency, toCurrency, exchange);
-            default:
-                return cryptoMapper.getTimeMinutely(fromCurrency, toCurrency, exchange);
-        }
+        if (!"datehourminute".contains(period)) throw new Exception();
+        return cryptoMapper.getTimestampsByPeriod(period, fromCurrency, toCurrency);
     }
 
     /**
@@ -674,112 +332,32 @@ public class DataCollection
     }
 
     /**
-     * Combines the data from daily, hourly, and minutely tables into a large Data array for response purposes.
-     * @return an array of data objects that map to the database and contain historical data
+     * Gets all the data for the specified time period.
+     * @param period the time period to get data for
+     * @return the data
      */
-    public Data[] getResponseData() {
+    public Data[] getResponseData(String period) {
 
-        // Gets the daily, hourly, and minutely data.
-        Data[] dailyData = cryptoMapper.getPriceDaily();
-        Data[] hourlyData = cryptoMapper.getPriceHourly();
-        Data[] minutelyData = cryptoMapper.getPriceMinutely();
-
-        // Adds the daily, hourly, and minutely data into a new single array.
-        Data[] historicalData = new Data[dailyData.length + hourlyData.length + minutelyData.length];
-
-        for (int i = 0; i < dailyData.length; i++) {
-            historicalData[i] = dailyData[i];
-        }
-
-        for (int i = 0; i < hourlyData.length; i++) {
-            historicalData[i] = hourlyData[i];
-        }
-
-        for (int i = 0; i < minutelyData.length; i++) {
-            historicalData[i] = minutelyData[i];
-        }
-
-        return historicalData;
-    }
-
-
-
-
-    /**
-     * Gets data from the appropriate database table depending on the specified period
-     * @param period
-     * @return the response object containing the requested historical data
-     */
-    public GeneralResponse getDataByPeriod(String period) {
         switch (period) {
-            case "day":
-                return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getPriceDaily());
-            case "hour":
-                return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getPriceHourly());
-            default:
-                return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getPriceMinutely());
+            case "day": return cryptoMapper.getDataByDay();
+            case "hour": return cryptoMapper.getDataByHour();
+            default: return cryptoMapper.getDataByMinute();
         }
     }
 
-    /**
-     * Gets data from all the time period database tables depending on the specified currency.
-     * @param currency
-     * @return the response object containing the requested historical data
-     */
-    public GeneralResponse getDataByCurrency(String currency) {
-        return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getDataByCurrency(currency));
-    }
+    public ArrayList<Data[]> getResponseData(String period, ArrayList<Integer> timestamps) {
 
-    /**
-     * Gets data from all the time period databases depending on the specified exchange.
-     * @param exchange
-     * @return the response object containing the requested historical data
-     */
-    public GeneralResponse getDataByExchange(String exchange) {
-        return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getDataByExchange(exchange));
-    }
+        ArrayList<Data[]> data = new ArrayList<>();
 
-    /**
-     * Gets data by the specified time period and currency.
-     * @param period
-     * @param currency
-     * @return the response object containing the requested historical data
-     */
-    public GeneralResponse getDataByPeriodAndCurrency(String period, String currency) {
-        switch (period) {
-            case "day":
-                return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getDataDailyByCurrency(currency));
-            case "hour":
-                return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getDataHourlyByCurrency(currency));
-            default:
-                return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getDataMinutelyByCurrency(currency));
+        for (Integer ts : timestamps) {
+
+            switch (period) {
+                case "day": data.add(cryptoMapper.getDailyDataByTime(ts));
+                case "hour": data.add(cryptoMapper.getHourlyDataByTime(ts));
+                default: data.add(cryptoMapper.getMinutelyDataByTime(ts));
+            }
         }
-    }
 
-    /**
-     * Gets data by the specified time period and exchange.
-     * @param period
-     * @param exchange
-     * @return the response object containing the requested historical data
-     */
-    public GeneralResponse getDataByPeriodAndExchange(String period, String exchange) {
-        switch (period) {
-            case "day":
-                return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getDataDailyByExchange(exchange));
-            case "hour":
-                return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getDataHourlyByExchange(exchange));
-            default:
-                return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getDataMinutelyByExchange(exchange));
-        }
-    }
-
-    /**
-     * Gets data by the specified currency and exchange.
-     * @param currency
-     * @param exchange
-     * @return the response object containing the requested historical data
-     */
-    public GeneralResponse getDataByCurrencyAndExchange(String currency, String exchange) {
-        return new GeneralResponse(HttpStatus.OK, "Query successful", cryptoMapper.getDataByCurrencyAndExchange(currency, exchange));
+        return data;
     }
 }

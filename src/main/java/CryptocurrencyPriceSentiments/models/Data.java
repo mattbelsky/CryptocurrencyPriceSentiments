@@ -1,14 +1,11 @@
-package crypto_compare_exercise.models;
+package CryptocurrencyPriceSentiments.models;
 
 public class Data {
 
     int id;
     int time;
-    int day;
-    int month;
-    int year;
-    int hour;
-    int minute;
+    String fromCurrency;
+    String toCurrency;
     double close;
     double high;
     double low;
@@ -30,48 +27,20 @@ public class Data {
         this.time = time;
     }
 
-    public int getDay() {
-        return day;
+    public String getFromCurrency() {
+        return fromCurrency;
     }
 
-    public void setDay(int day) {
-        this.day = day;
+    public void setFromCurrency(String fromCurrency) {
+        this.fromCurrency = fromCurrency;
     }
 
-    public int getMonth() {
-        return month;
+    public String getToCurrency() {
+        return toCurrency;
     }
 
-    public void setMonth(int month) {
-        this.month = month;
-    }
-
-    public int getYear() {
-        return year;
-    }
-
-    public void setYear(int year) {
-        this.year = year;
-    }
-
-    public int getHour() {
-        return hour;
-    }
-
-    public void setHour(int hour) {
-        this.hour = hour;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public int getMinute() {
-        return minute;
-    }
-
-    public void setMinute(int minute) {
-        this.minute = minute;
+    public void setToCurrency(String toCurrency) {
+        this.toCurrency = toCurrency;
     }
 
     public double getClose() {

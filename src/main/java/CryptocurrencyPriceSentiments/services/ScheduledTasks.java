@@ -1,117 +1,95 @@
-//package crypto_compare_exercise.services;
-//
-//import crypto_compare_exercise.CryptoMapper;
-//import crypto_compare_exercise.models.Data;
-//import crypto_compare_exercise.models.PriceHistorical;
-//import org.springframework.beans.factory.annotation.Autowired;
-//import org.springframework.scheduling.annotation.Scheduled;
-//import org.springframework.stereotype.Service;
-//import org.springframework.web.client.RestTemplate;
-//
-//import java.sql.Timestamp;
-//import java.time.LocalDateTime;
-//
-//@Service
-//public class ScheduledTasks {
-//
-//    @Autowired
-//    CryptoService cryptoService;
-//
-//    @Autowired
-//    CryptoMapper cryptoMapper;
-//
-//    @Autowired
-//    RestTemplate restTemplate;
-//
-//    // Queries the CryptoCompare API for minutely data every 5 minutes and persists the data into the local database.
-//    @Scheduled(fixedRate = 300000)
-//    public void getLastFiveMinutes() {
-//
-//        /*  What is current timestamp?
-//            var = Divide current timestamp by 1000 for querying.
-//            Perform query
-//                limit = 5
-//                toTs = var
-//            Get Data from response.
-//            cryptoMapper.addPriceByMinute()
-//
-//         */
-//        String fromCurrency = "BTC";
-//        String toCurrency = "USD";
-//        int numRecords = 5;
-//        int currentTimeSeconds = (int) (System.currentTimeMillis() / 1000);
-//        String queryPriceMinute = "https://min-api.cryptocompare.com/data/histominute?fsym="
-//                + fromCurrency + "&tsym=" + toCurrency + "&aggregate=1&limit=" + numRecords + "&toTs=" + currentTimeSeconds;
-//        PriceHistorical phMinute = restTemplate.getForObject(queryPriceMinute, PriceHistorical.class);
-//
-//        // Adds data to the data_by_minute database.
-//        for (int i = 0; i < phMinute.getData().length; i++) {
-//
-//            // The Data object being acted upon.
-//            Data datum = phMinute.getData()[i];
-//
-//            // Multiplies the time integer by 1000 because it measures seconds rather than milliseconds.
-//            long rawTime = (long) (datum.getTime()) * 1000;
-//
-//            // Isolates and splits the timestamp within each Data object into separate fields.
-//            // Converts the timestamp into a LocalDateTime object, which has the methods to further split it up.
-//            Timestamp timestamp = new Timestamp(rawTime);
-//            LocalDateTime dateTime = timestamp.toLocalDateTime();
-//
-//            // Sets the date and time.
-//            int minute = dateTime.getMinute();
-//            int hour = dateTime.getHour();
-//            int day = dateTime.getDayOfMonth();
-//            int month = dateTime.getMonthValue();
-//            int year = dateTime.getYear();
-//
-//            datum.setMinute(minute);
-//            datum.setHour(hour);
-//            datum.setDay(day);
-//            datum.setMonth(month);
-//            datum.setYear(year);
-//            cryptoMapper.addPriceByMinute(datum);
-//        }
-//    }
-//
-//    /*  Scheduled tasks hourly:
-//            "0 0 * * * *" = the top of every hour of every day. (cron expression)
-//            Get current time.
-//                Issues:
-//                    System.currentTimeMillis() will be after the hour -- I want the timestamp of the last minute of the prev hour
-//                        Solution:
-//                            int timestamp = (int) (System.currentTimeMillis() / 1000);
-//                            while (timestamp % 3600 > 0)
-//                                timestamp -= 60;
-//                            timestamp -= 60
-//            Fill in gaps in minutely database -- cryptoService.seekMissingMinuteValues()
-//            Query minutely database
-//                close = where (time = timestamp)
-//                high = max(high)
-//                low = min(low)
-//                volumeFrom = sum(volumeFrom)
-//                volumeTo = sum(volumeTo)
-//                where hour = get hour of timestamp, day = get day of timestamp, etc.
-//
-//     */
-//    @Scheduled(cron = "0 0 * * * *")
-//    public void aggregateHourly() {
-//
-//        // Gets the timestamp for the last minute of the previous hour
-//        // Current timestamp will be just after the hour, so it needs to be decremented by at least one minute.
-//        int timestamp = (int) (System.currentTimeMillis() / 1000);
-//        while (timestamp % 3600 > 0) {
-//            timestamp -= 60;
-//        }
-//        timestamp -= 60;
-//
-//        // Fills in the gaps in the minutely database.
-//        cryptoService.seekMissingMinuteValues();
-//
-//
-//
-//        // Queries the minutely database for aggregate data for the last hour.
-//        cryptoMapper.
-//    }
-//
-//}
+package CryptocurrencyPriceSentiments.services;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+
+@Service
+public class ScheduledTasks {
+
+    @Autowired
+    DataCollection dataCollection;
+
+    private boolean cronHit = false;
+
+    protected ArrayList<Integer> timestampDaily = new ArrayList<>();
+    protected ArrayList<Integer> timestampHourly = new ArrayList<>();
+    protected ArrayList<Integer> timestampMinutely = new ArrayList<>();
+
+    /**
+     * Gets the timestamp of midnight of the current day at 0:02.
+     */
+    @Scheduled(cron = "0 2 0 * * *", zone = "GMT")
+    private void queryTimestampDaily() {
+
+        int now = (int) (System.currentTimeMillis() / 1000);
+        int midnight = now - DataCollection.SEC_IN_MIN * 2;
+        cronHit = true;
+
+        timestampDaily.add(midnight);
+        dataCollection.switchCronOps("day");
+
+        // Resets the global variables.
+        cronHit = false;
+        timestampDaily.clear();
+    }
+
+    /**
+     * Gets the timestamp of the previous hour in the first minute of every hour and adds social media data for the
+     * previous hour.
+     */
+    @Scheduled(cron = "0 1 * * * *", zone = "GMT")
+    private void queryTimestampHourly() {
+
+        int now = (int) (System.currentTimeMillis() / 1000);
+        int hour = now - DataCollection.SEC_IN_MIN;
+        cronHit = true;
+
+        timestampHourly.add(hour);
+        dataCollection.switchCronOps("hour");
+
+        // Resets the global variables.
+        cronHit = false;
+        timestampHourly.clear();
+    }
+
+    /**
+     * Generates an array list of timestamps every five minutes for the previous five minutes.
+     */
+    @Scheduled(cron = "0 */5 * * * *", zone = "GMT")
+    private void queryTimestampMinutely() {
+
+        int now = (int) (System.currentTimeMillis() / 1000);
+        cronHit = true;
+
+        for (int j = 0; j < 5; j++) {
+            timestampMinutely.add(now - DataCollection.SEC_IN_MIN * j);
+        }
+
+        dataCollection.switchCronOps("minute");
+
+        // Resets the global variables.
+        cronHit = false;
+        timestampMinutely.clear();
+    }
+
+    public ArrayList<Integer> getTimestampDaily() { return timestampDaily; }
+
+    public ArrayList<Integer> getTimestampHourly() {
+        return timestampHourly;
+    }
+
+    public ArrayList<Integer> getTimestampMinutely() {
+        return timestampMinutely;
+    }
+
+    public boolean isCronHit() {
+        return cronHit;
+    }
+
+    public void setCronHit(boolean cronHit) {
+        this.cronHit = cronHit;
+    }
+}

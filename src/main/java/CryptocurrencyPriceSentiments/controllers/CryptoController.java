@@ -1,19 +1,16 @@
-package crypto_compare_exercise.controllers;
+package CryptocurrencyPriceSentiments.controllers;
 
-import crypto_compare_exercise.models.Data;
-import crypto_compare_exercise.services.CryptoService;
-import org.springframework.beans.factory.annotation.Autowired;
+import CryptocurrencyPriceSentiments.models.Data;
+import CryptocurrencyPriceSentiments.models.GeneralResponse;
+import CryptocurrencyPriceSentiments.services.AsyncDataCollection;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
+import java.util.concurrent.Future;
 
 @RestController
 public class CryptoController {
-
-    @Autowired
-    CryptoService cryptoService;
 
     // Other possible options are:
     //      aggregate (time period to aggregate over)
@@ -21,13 +18,14 @@ public class CryptoController {
     //      toTs (last Unix timestamp to return data for)
     // So far, these are set to a default value by the developer.
     @RequestMapping("/gethistory")
-    public Data[] addPriceHistorical(@RequestParam(value = "fsym") String fromCurrency,
-                                                         @RequestParam(value = "tsym") String toCurrency) {
-        return cryptoService.addPriceHistorical(fromCurrency, toCurrency);
+    public Future<GeneralResponse> addPriceHistorical(@RequestParam(value = "period") String period,
+                                                      @RequestParam(value = "numrecords") int numRecords) throws Exception {
+        AsyncDataCollection asyncDataCollection = new AsyncDataCollection();
+        return asyncDataCollection.backloadData(period, numRecords);
     }
 
-    @RequestMapping("/missingvalues")
-    public ArrayList<Integer> seekMissingValues() {
-        return cryptoService.seekMissingMinuteValues();
-    }
+//    @RequestMapping("/missingvalues")
+//    public ArrayList<Integer> seekMissingValues() {
+//        return dataCollection.seekMissingMinuteValues();
+//    }
 }

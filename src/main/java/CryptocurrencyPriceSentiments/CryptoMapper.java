@@ -1,6 +1,6 @@
-package crypto_compare_exercise;
+package CryptocurrencyPriceSentiments;
 
-import crypto_compare_exercise.models.*;
+import CryptocurrencyPriceSentiments.models.Data;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
@@ -8,69 +8,83 @@ import org.apache.ibatis.annotations.Select;
 @Mapper
 public interface CryptoMapper {
 
-    // Statements to add & select all prices.
-    String ADD_PRICES = "INSERT INTO `crypto-compare`.`data` (`time`, `close`, `high`, `low`, `open`, `volumeFrom`, `volumeTo`) " +
-            "VALUES (#{time}, #{close}, #{high}, #{low}, #{open}, #{volumefrom}, #{volumeto});";
-    String GET_PRICES = "SELECT * FROM `crypto-compare`.`data`";
+    String SELECT_NEWS_BY_CATEGORY = "SELECT * FROM `komodoDB`.`news` WHERE categories LIKE '%${category}%';";
 
-    // Statements to add data to each of the databases.
-    String ADD_PRICE_BY_DATE = "INSERT INTO `crypto-compare`.`data_by_date` " +
-            "(`time`, `day`, `month`, `year`, `close`, `high`, `low`, `volumeFrom`, `volumeTo`) " +
-            "VALUES (#{time}, #{day}, #{month}, #{year}, #{close}, #{high}, #{low}, #{volumefrom}, #{volumeto});";
-    String ADD_PRICE_BY_HOUR_DATE = "INSERT INTO `crypto-compare`.`data_by_hour` " +
-            "(`time`, `hour`, `day`, `month`, `year`, `close`, `high`, `low`, `volumeFrom`, `volumeTo`) " +
-            "VALUES (#{time}, #{hour}, #{day}, #{month}, #{year}, #{close}, #{high}, #{low}, #{volumefrom}, #{volumeto});";
-    String ADD_PRICE_BY_MINUTE_HOUR_DATE = "INSERT INTO `crypto-compare`.`data_by_minute` " +
-            "(`time`, `minute`, `hour`, `day`, `month`, `year`, `close`, `high`, `low`, `volumeFrom`, `volumeTo`) " +
-            "VALUES (#{time}, #{minute}, #{hour}, #{day}, #{month}, #{year}, #{close}, #{high}, #{low}, #{volumefrom}, #{volumeto});";
+    // Adds data to the date table.
+    @Insert("INSERT INTO `crypto-compare`.`data_by_date` " +
+            "(`time`, `fromCurrency`, `toCurrency`, `close`, `high`, `low`, `volumeFrom`, `volumeTo`) " +
+            "VALUES (#{time}, #{fromCurrency}, #{toCurrency}, #{close}, #{high}, #{low}, #{volumefrom}, #{volumeto});")
+    public int addPriceByDate(Data dataByDate);
 
-    // Statements to select data from each of the databases.
-    String SELECT_PRICE_BY_DATE = "SELECT * FROM `crypto-compare`.`data_by_date`;";
-
-    String SELECT_TIMESTAMP_BY_DATE = "SELECT time FROM `crypto-compare`.`data_by_date` ORDER BY time ASC;";
-    String SELECT_TIMESTAMP_BY_HOUR = "SELECT time FROM `crypto-compare`.`data_by_hour` ORDER BY time ASC;";
-    String SELECT_TIMESTAMP_BY_MINUTE = "SELECT time FROM `crypto-compare`.`data_by_minute` ORDER BY time ASC;";
-
-    String SELECT_PRICE_BY_HOUR_AND_DATE = "SELECT * FROM `crypto-compare`.`data_by_hour` WHERE date = #{date} AND hour = #{hour};";
-    String SELECT_PRICE_BY_MIN_AND_HOUR_AND_DATE = "SELECT * FROM `crypto-compare`.`data_by_minute` WHERE date = #{date} AND hour = #{hour} AND min = #{min};";
-
-    // Seeks missing values from each of the databases.
-
-    // Add and get all prices.
-    @Insert(ADD_PRICES)
-    public int addPrices(Data datum);
-
-    @Select(GET_PRICES)
-    public Data[] getPrices();
-
-    // Add prices by specific criteria.
-    @Insert(ADD_PRICE_BY_DATE)
-    public int addPriceByDate(Data priceByDate);
-
-    @Insert(ADD_PRICE_BY_HOUR_DATE)
+    // Adds data to the hour table.
+    @Insert("INSERT INTO `crypto-compare`.`data_by_hour` " +
+            "(`time`, `fromCurrency`, `toCurrency`, `close`, `high`, `low`, `volumeFrom`, `volumeTo`) " +
+            "VALUES (#{time}, #{fromCurrency}, #{toCurrency}, #{close}, #{high}, #{low}, #{volumefrom}, #{volumeto});")
     public int addPriceByHour(Data dataByHour);
 
-    @Insert(ADD_PRICE_BY_MINUTE_HOUR_DATE)
+    // Adds data to the minute table.
+    @Insert("INSERT INTO `crypto-compare`.`data_by_minute` " +
+            "(`time`, `fromCurrency`, `toCurrency`, `close`, `high`, `low`, `volumeFrom`, `volumeTo`) " +
+            "VALUES (#{time}, #{fromCurrency}, #{toCurrency}, #{close}, #{high}, #{low}, #{volumefrom}, #{volumeto});")
     public int addPriceByMinute(Data dataByMinute);
 
-    // Get prices by specific criteria.
-    @Select(SELECT_PRICE_BY_DATE)
-    public Data[] getPriceByDate();
+
+    // Gets all data from the day table.
+    @Select("SELECT * FROM `crypto-compare`.`data_by_date`;")
+    public Data[] getDataByDay();
+
+    // Gets all data from the day table.
+    @Select("SELECT * FROM `crypto-compare`.`data_by_hour`;")
+    public Data[] getDataByHour();
+
+    // Gets all data from the day table.
+    @Select("SELECT * FROM `crypto-compare`.`data_by_minute`;")
+    public Data[] getDataByMinute();
 
 
-    @Select(SELECT_TIMESTAMP_BY_DATE)
-    public Integer[] getTimestampByDate();
+    // Gets data from the day data for the specified timestamp.
+    @Select("SELECT * FROM `crypto-compare`.`data_by_date` WHERE `time` = #{time};")
+    public Data[] getDailyDataByTime(int time);
 
-    @Select(SELECT_TIMESTAMP_BY_HOUR)
-    public Integer[] getTimestampByHour();
+    // Gets data from the day data for the specified timestamp.
+    @Select("SELECT * FROM `crypto-compare`.`data_by_hour` WHERE `time` = #{time};")
+    public Data[] getHourlyDataByTime(int time);
 
-    @Select(SELECT_TIMESTAMP_BY_MINUTE)
-    public Integer[] getTimestampByMinute();
+    // Gets data from the day data for the specified timestamp.
+    @Select("SELECT * FROM `crypto-compare`.`data_by_minute` WHERE `time` = #{time};")
+    public Data[] getMinutelyDataByTime(int time);
 
 
-    @Select(SELECT_PRICE_BY_HOUR_AND_DATE)
-    public Data[] getPriceByHourAndDate();
+    // Gets all timestamps by the specified time period and currency pair.
+    @Select("SELECT `time` FROM `crypto-compare`.`data_by_${arg0}` " +
+            "WHERE `fromCurrency` = #{arg1} AND `toCurrency` = #{arg2} ORDER BY time ASC;")
+    public Integer[] getTimestampsByPeriod(String period, String fromCurrency, String toCurrency);
 
-    @Select(SELECT_PRICE_BY_MIN_AND_HOUR_AND_DATE)
-    public Data[] getPriceByMinAndDate();
+    // Counts the number of records by time period and currency pair.
+    @Select("SELECT COUNT(id) FROM `crypto-compare`.`data_by_${arg0}` " +
+            "WHERE `fromCurrency` = #{arg1} AND `toCurrency` = #{arg2};")
+    public int countRecordsByPeriod(String period, String fromCurrency, String toCurrency);
+
+    // Gets the last timestamp by time period and currency pair.
+    @Select("SELECT `time` FROM `crypto-compare`.`data_by_${arg0}` " +
+            "WHERE `fromCurrency` = #{arg1} AND `toCurrency` = #{arg2} ORDER BY `time` ASC LIMIT 1;")
+    public int getLastTimestamp(String period, String fromCurrency, String toCurrency);
+
+    // Adds news data to the database.
+    @Insert("INSERT IGNORE INTO `crypto-compare`.`news` " +
+            "(`articleId`, `publishedOn`, `title`, `url`, `body`, `tags`, `categories`) " +
+            "VALUES (#{articleId}, #{publishedOn}, #{title}, #{url}, #{body}, #{tags}, #{categories});")
+    public int addNews(CryptocurrencyPriceSentiments.models.news.Data newsData);
+
+    // Gets all news data from the database.
+    @Select("SELECT * FROM `crypto-compare`.`news`;")
+    public CryptocurrencyPriceSentiments.models.news.Data[] getNews();
+
+    // Gets the number of currencies being traded.
+    @Select("SELECT COUNT(id) FROM `crypto-compare`.`currencies`;")
+    public int getNumCurrencies();
+
+    // Gets trading symbols for each currency pair.
+    @Select("SELECT CONCAT(`from_symbol`, '/', `to_symbol`) FROM `crypto-compare`.`currency_pairs`;")
+    public String[] getCurrencyPairs();
 }
