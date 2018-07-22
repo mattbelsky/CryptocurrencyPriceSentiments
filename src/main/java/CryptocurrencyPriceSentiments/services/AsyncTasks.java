@@ -1,18 +1,27 @@
 package CryptocurrencyPriceSentiments.services;
 
+import CryptocurrencyPriceSentiments.CryptoMapper;
 import CryptocurrencyPriceSentiments.models.GeneralResponse;
+import CryptocurrencyPriceSentiments.models.news.News;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.AsyncResult;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.concurrent.Future;
 
-public class AsyncDataCollection {
+public class AsyncTasks {
+
+    @Autowired
+    RestTemplate restTemplate;
 
     @Autowired
     DataCollection dataCollection;
+
+    @Autowired
+    CryptoMapper cryptoMapper;
 
     /**
      * Loads a specified number of records from the CryptoCompare API into the database by period. This is potentially
@@ -82,4 +91,31 @@ public class AsyncDataCollection {
 
         return new AsyncResult<GeneralResponse>(response);
     }
+
+    /**
+     * Queries for news stories to the database and adds them to the database.
+     * @param categories the categories to query the CryptoCompare API for
+     * @return a response object containing news categories
+     */
+    @Async
+    public void addNews(String categories) {
+
+        String[] tradingPairs = dataCollection.getTradingPairs();
+
+        for (String pair : tradingPairs) {
+
+            String from = pair.substring(0, pair.indexOf("/"));
+            String to = pair.substring(pair.indexOf("/") + 1);
+
+            // Maps even if categories is empty or nonsense.
+            String query = "https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=" + categories;
+            News news = restTemplate.getForObject(query, News.class);
+            CryptocurrencyPriceSentiments.models.news.Data[] newsData = news.getData();
+
+            for (CryptocurrencyPriceSentiments.models.news.Data story : newsData) {
+                cryptoMapper.addNews(story);
+            }
+        }
+    }
+
 }

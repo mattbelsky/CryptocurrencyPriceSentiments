@@ -77,7 +77,7 @@ public interface CryptoMapper {
     public int addNews(CryptocurrencyPriceSentiments.models.news.Data newsData);
 
     // Gets all news data from the database.
-    @Select("SELECT * FROM `crypto-compare`.`news`;")
+    @Select("SELECT * FROM `crypto-compare`.`news` LIMIT 50;")
     public CryptocurrencyPriceSentiments.models.news.Data[] getNews();
 
     // Gets the number of currencies being traded.
@@ -87,4 +87,8 @@ public interface CryptoMapper {
     // Gets trading symbols for each currency pair.
     @Select("SELECT CONCAT(`from_symbol`, '/', `to_symbol`) FROM `crypto-compare`.`currency_pairs`;")
     public String[] getCurrencyPairs();
+
+    // Gets news by category.
+    @Select("SELECT * FROM `crypto-compare`.`news` WHERE `categories` LIKE #{categories};")
+    public CryptocurrencyPriceSentiments.models.news.Data[] getNewsByCategory(String categories);
 }

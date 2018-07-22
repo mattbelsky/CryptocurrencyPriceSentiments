@@ -241,31 +241,11 @@ public class DataCollection {
     }
 
     /**
-     * Queries for news stories to the database and adds them to the database.
-     * @param categories the categories to query the CryptoCompare API for
-     * @return a response object containing news categories
-     */
-    public GeneralResponse addNews(String categories) {
-
-        // Maps even if categories is empty or nonsense.
-        String query = "https://min-api.cryptocompare.com/data/v2/news/?lang=EN&categories=" + categories;
-        News news = restTemplate.getForObject(query, News.class);
-        CryptocurrencyPriceSentiments.models.news.Data[] newsData = news.getData();
-
-        for (CryptocurrencyPriceSentiments.models.news.Data story : newsData) {
-            cryptoMapper.addNews(story);
-        }
-
-        return new GeneralResponse(HttpStatus.OK, "News data successfully added.", cryptoMapper.getNews());
-    }
-
-    /**
      * Gets news data from the database.
-     * @param categories the news categories to query for
      * @return a response object containing news data
      * @throws TableEmptyException a custom exception thrown when a database table is empty
      */
-    public GeneralResponse getNews(String categories) throws TableEmptyException {
+    public GeneralResponse getNews() throws TableEmptyException {
 
         // Throws an exception if the news table is empty.
         if (cryptoMapper.getNews().length == 0) {

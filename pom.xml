@@ -44,6 +44,11 @@
             <artifactId>hibernate-core</artifactId>
             <version>5.0.12.Final</version>
         </dependency>
+        <dependency>
+            <groupId>com.ibm.watson.developer_cloud</groupId>
+            <artifactId>tone-analyzer</artifactId>
+            <version>6.2.0</version>
+        </dependency>
     </dependencies>
 
     <properties>
