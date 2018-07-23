@@ -44,12 +44,6 @@ public class CryptoController {
         return dataCollection.getNews();
     }
 
-    @GetMapping("/news/toneanalysis")
-    public ArrayList<ToneAnalysis> getToneAnalysis(@RequestParam(value = "categories") String categories) throws TableEmptyException {
-
-        return sentimentAnalysis.analyzeTone(categories);
-    }
-
 //    @RequestMapping("/missingvalues")
 //    public ArrayList<Integer> seekMissingValues() {
 //        return dataCollection.seekMissingMinuteValues();

@@ -1,9 +1,12 @@
 package CryptocurrencyPriceSentiments;
 
+import CryptocurrencyPriceSentiments.models.CurrenciesSentiments;
 import CryptocurrencyPriceSentiments.models.Data;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
+
+import java.util.ArrayList;
 
 @Mapper
 public interface CryptoMapper {
@@ -78,11 +81,15 @@ public interface CryptoMapper {
 
     // Gets all news data from the database.
     @Select("SELECT * FROM `crypto-compare`.`news` LIMIT 50;")
-    public CryptocurrencyPriceSentiments.models.news.Data[] getNews();
+    public ArrayList<CryptocurrencyPriceSentiments.models.news.Data> getNews();
 
     // Gets the number of currencies being traded.
     @Select("SELECT COUNT(id) FROM `crypto-compare`.`currencies`;")
     public int getNumCurrencies();
+
+    // Gets a list of the currencies being traded.
+    @Select("SELECT `symbol` FROM `crypto-compare`.`currencies`;")
+    public ArrayList<String> getCurrencies();
 
     // Gets trading symbols for each currency pair.
     @Select("SELECT CONCAT(`from_symbol`, '/', `to_symbol`) FROM `crypto-compare`.`currency_pairs`;")
@@ -90,5 +97,10 @@ public interface CryptoMapper {
 
     // Gets news by category.
     @Select("SELECT * FROM `crypto-compare`.`news` WHERE `categories` LIKE #{categories};")
-    public CryptocurrencyPriceSentiments.models.news.Data[] getNewsByCategory(String categories);
+    public ArrayList<CryptocurrencyPriceSentiments.models.news.Data> getNewsByCategory(String categories);
+
+    // Adds sentiment data.
+    @Insert("INSERT INTO `crypto_compare`.`currencies_sentiments` (`currency_symbol`, `published_on`, `sentiment`, `score`) " +
+            "VALUES (#{currency}, #{publishedOn}, #{sentiment}, #{score});")
+    public int addSentiments(CurrenciesSentiments sentiment);
 }

@@ -248,13 +248,13 @@ public class DataCollection {
     public GeneralResponse getNews() throws TableEmptyException {
 
         // Throws an exception if the news table is empty.
-        if (cryptoMapper.getNews().length == 0) {
+        if (cryptoMapper.getNews().size() == 0) {
 
             throw new TableEmptyException(HttpStatus.NO_CONTENT, "No data found");
 
         } else /*if (categories == null)*/{
 
-            CryptocurrencyPriceSentiments.models.news.Data[] newsData = cryptoMapper.getNews();
+            ArrayList<CryptocurrencyPriceSentiments.models.news.Data> newsData = cryptoMapper.getNews();
             return new GeneralResponse(HttpStatus.OK, "News data successfully queried.", newsData);
 //        } else {
 //
