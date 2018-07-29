@@ -18,4 +18,16 @@ public class GeneralResponse {
         this.httpStatus = httpStatus;
         this.message = message;
     }
+
+    public HttpStatus getHttpStatus() {
+        return httpStatus;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public Object getObj() {
+        return obj;
+    }
 }

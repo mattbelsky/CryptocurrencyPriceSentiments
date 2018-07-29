@@ -6,6 +6,7 @@ import CryptocurrencyPriceSentiments.models.Data;
 import CryptocurrencyPriceSentiments.models.GeneralResponse;
 import CryptocurrencyPriceSentiments.models.PriceHistorical;
 import CryptocurrencyPriceSentiments.models.news.News;
+import org.apache.ibatis.jdbc.Null;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,8 +53,6 @@ public class DataCollection {
         String[] tradingPairs = cryptoMapper.getCurrencyPairs();
         return tradingPairs;
     }
-
-
 
     /**
      * Executes the appropriate tasks depending on which cron job has just run.
@@ -173,6 +172,8 @@ public class DataCollection {
         if (period.equals("day")) cryptoMapper.addPriceByDate(data);
         else if (period.equals("hour")) cryptoMapper.addPriceByHour(data);
         else if (period.equals("minute")) cryptoMapper.addPriceByMinute(data);
+
+        logger.info("Added data for period \"" + period + "\" and currency pair \"" + fromCurrency + "/" + toCurrency + "\".");
     }
 
     /**
@@ -223,7 +224,7 @@ public class DataCollection {
      */
     public int countRecordsByPeriod(String period, String fromCurrency, String toCurrency) throws Exception {
 
-        if (!"datehourminute".contains(period)) throw new Exception();
+        checkValidPeriod(period);
         return cryptoMapper.countRecordsByPeriod(period, fromCurrency, toCurrency);
     }
 
@@ -236,7 +237,7 @@ public class DataCollection {
      */
     public int getLastTimestampByPeriod(String period, String fromCurrency, String toCurrency) throws Exception {
 
-        if (!"datehourminute".contains(period)) throw new Exception();
+        checkValidPeriod(period);
         return cryptoMapper.getLastTimestamp(period, fromCurrency, toCurrency);
     }
 
@@ -290,7 +291,7 @@ public class DataCollection {
      */
     public Integer[] getTimestampsByPeriod(String period, String fromCurrency, String toCurrency) throws Exception {
 
-        if (!"datehourminute".contains(period)) throw new Exception();
+        checkValidPeriod(period);
         return cryptoMapper.getTimestampsByPeriod(period, fromCurrency, toCurrency);
     }
 
@@ -308,6 +309,20 @@ public class DataCollection {
                 return MIN_IN_HOUR * SEC_IN_MIN;
             default:
                 return MIN_IN_HOUR;
+        }
+    }
+
+    /**
+     * Checks if the specified period corresponds to a time period recorded in the database.
+     * @param period the specified period
+     */
+    public void checkValidPeriod(String period) throws Exception {
+
+        if (!"datehourminute".contains(period)) {
+
+            String message = "\"" + period + "\" is not a valid time period";
+            logger.error(message);
+            throw new Exception(message);
         }
     }
 

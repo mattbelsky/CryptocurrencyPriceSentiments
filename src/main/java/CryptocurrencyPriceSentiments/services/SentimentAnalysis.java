@@ -3,7 +3,6 @@ package CryptocurrencyPriceSentiments.services;
 import CryptocurrencyPriceSentiments.CryptoMapper;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
 import CryptocurrencyPriceSentiments.models.CurrenciesSentiments;
-import CryptocurrencyPriceSentiments.models.GeneralResponse;
 import CryptocurrencyPriceSentiments.models.news.Data;
 import com.ibm.watson.developer_cloud.tone_analyzer.v3.ToneAnalyzer;
 import com.ibm.watson.developer_cloud.tone_analyzer.v3.model.ToneAnalysis;
@@ -11,7 +10,6 @@ import com.ibm.watson.developer_cloud.tone_analyzer.v3.model.ToneOptions;
 import com.ibm.watson.developer_cloud.tone_analyzer.v3.model.ToneScore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -28,17 +26,6 @@ public class SentimentAnalysis {
 
     @Autowired
     CryptoMapper cryptoMapper;
-
-    // The tones that Watson Tone Analyzer detects
-    private String[] watsonTones = {
-            "anger",
-            "fear",
-            "joy",
-            "sadness",
-            "analytical",
-            "confident",
-            "tentative"
-    };
 
     /**
      * Calls Watson Tone Analyzer to analyze the tone of a news story.

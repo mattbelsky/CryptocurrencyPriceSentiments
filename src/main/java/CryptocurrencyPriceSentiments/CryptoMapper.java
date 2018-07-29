@@ -2,6 +2,7 @@ package CryptocurrencyPriceSentiments;
 
 import CryptocurrencyPriceSentiments.models.CurrenciesSentiments;
 import CryptocurrencyPriceSentiments.models.Data;
+import CryptocurrencyPriceSentiments.models.WatsonTones;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
@@ -100,7 +101,11 @@ public interface CryptoMapper {
     public ArrayList<CryptocurrencyPriceSentiments.models.news.Data> getNewsByCategory(String categories);
 
     // Adds sentiment data.
-    @Insert("INSERT INTO `crypto_compare`.`currencies_sentiments` (`currency_symbol`, `published_on`, `sentiment`, `score`) " +
+    @Insert("INSERT INTO `crypto-compare`.`currencies_sentiments` (`currency_symbol`, `published_on`, `sentiment`, `score`) " +
             "VALUES (#{currency}, #{publishedOn}, #{sentiment}, #{score});")
     public int addSentiments(CurrenciesSentiments sentiment);
+
+    // Gets a list of tone names that Watson returns.
+    @Select("SELECT `tone` FROM `crypto-compare`.`watson_tones`;")
+    public String[] getToneNames();
 }

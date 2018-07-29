@@ -7,6 +7,7 @@ import CryptocurrencyPriceSentiments.services.DataCollection;
 import CryptocurrencyPriceSentiments.services.SentimentAnalysis;
 import com.ibm.watson.developer_cloud.tone_analyzer.v3.model.ToneAnalysis;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,26 +22,28 @@ public class CryptoController {
     DataCollection dataCollection;
 
     @Autowired
-    SentimentAnalysis sentimentAnalysis;
+    AsyncTasks asyncTasks;
 
     // Other possible options are:
     //      aggregate (time period to aggregate over)
     //      limit (number of data points to return)
     //      toTs (last Unix timestamp to return data for)
     // So far, these are set to a default value by the developer.
+    // TODO Handle exception better in secondary thread.
     @GetMapping("/gethistory")
-    public Future<GeneralResponse> addPriceHistorical(@RequestParam(value = "period") String period,
-                                                      @RequestParam(value = "numrecords") int numRecords) throws Exception {
-
-        AsyncTasks asyncTasks = new AsyncTasks();
-        return asyncTasks.backloadData(period, numRecords);
+    public GeneralResponse addPriceHistorical(@RequestParam(value = "period") String period,
+                                              @RequestParam(value = "numrecords") int numRecords) throws Exception {
+        asyncTasks.backloadData(period, numRecords);
+        return new GeneralResponse(HttpStatus.OK, "Data loaded.");
     }
 
     @GetMapping("/news/add")
-    public GeneralResponse addNews(@RequestParam(value = "categories") String categories) throws TableEmptyException {
+    public GeneralResponse addNews(@RequestParam(value = "categories", required = false) String categories)
+            throws TableEmptyException {
 
-        AsyncTasks asyncTasks = new AsyncTasks();
-        asyncTasks.addNews(categories);
+        if (categories == null) asyncTasks.addNews();
+        else asyncTasks.addNews(categories);
+
         return dataCollection.getNews();
     }
 
