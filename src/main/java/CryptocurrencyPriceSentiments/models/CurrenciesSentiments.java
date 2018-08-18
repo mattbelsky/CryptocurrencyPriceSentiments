@@ -1,13 +1,12 @@
 package CryptocurrencyPriceSentiments.models;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 public class CurrenciesSentiments {
 
+    // NOTE: @JsonProperty annotation does not work here, and I don't know why.
+    // JSON result returns "currencySymbol" and "publishedOn" as null and 0, respectively.
+    // I fixed the issue in the mapper by adding a custom result map, but it's not an ideal fix if this app is scaled.
     int id;
-    @JsonProperty("currency_symbol")
     String currencySymbol;
-    @JsonProperty("published_on")
     int publishedOn;
     String sentiment;
     double score;

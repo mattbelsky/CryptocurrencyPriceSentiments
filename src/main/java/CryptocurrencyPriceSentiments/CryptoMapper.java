@@ -3,9 +3,7 @@ package CryptocurrencyPriceSentiments;
 import CryptocurrencyPriceSentiments.models.CurrenciesSentiments;
 import CryptocurrencyPriceSentiments.models.Data;
 import CryptocurrencyPriceSentiments.models.WatsonTones;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 import java.util.ArrayList;
 
@@ -102,10 +100,20 @@ public interface CryptoMapper {
 
     // Adds sentiment data.
     @Insert("INSERT INTO `crypto-compare`.`currencies_sentiments` (`currency_symbol`, `published_on`, `sentiment`, `score`) " +
-            "VALUES (#{currency}, #{publishedOn}, #{sentiment}, #{score});")
+            "VALUES (#{currencySymbol}, #{publishedOn}, #{sentiment}, #{score});")
     public int addSentiments(CurrenciesSentiments sentiment);
 
     // Gets a list of tone names that Watson returns.
     @Select("SELECT `tone` FROM `crypto-compare`.`watson_tones`;")
     public String[] getToneNames();
+
+    // Gets all sentiments associated with all news stories.
+    @Select("SELECT * FROM `crypto-compare`.`currencies_sentiments` LIMIT 50;")
+    @Results(id = "CurrenciesSentiments", value = {
+            @Result(column = "id", property = "id"),
+            @Result(column = "currency_symbol", property = "currencySymbol"),
+            @Result(column = "published_on", property = "publishedOn"),
+            @Result(column = "sentiment", property = "sentiment"),
+            @Result(column = "score", property = "score")})
+    public ArrayList<CurrenciesSentiments> getSentiments();
 }

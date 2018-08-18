@@ -2,6 +2,7 @@ package CryptocurrencyPriceSentiments.services;
 
 import CryptocurrencyPriceSentiments.CryptoMapper;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
+import CryptocurrencyPriceSentiments.models.CurrenciesSentiments;
 import CryptocurrencyPriceSentiments.models.Data;
 import CryptocurrencyPriceSentiments.models.GeneralResponse;
 import CryptocurrencyPriceSentiments.models.PriceHistorical;
@@ -225,6 +226,7 @@ public class DataCollection {
     public int countRecordsByPeriod(String period, String fromCurrency, String toCurrency) throws Exception {
 
         checkValidPeriod(period);
+        if (period.equals("day")) period = "date";
         return cryptoMapper.countRecordsByPeriod(period, fromCurrency, toCurrency);
     }
 
@@ -238,6 +240,7 @@ public class DataCollection {
     public int getLastTimestampByPeriod(String period, String fromCurrency, String toCurrency) throws Exception {
 
         checkValidPeriod(period);
+        if (period.equals("day")) period = "date";
         return cryptoMapper.getLastTimestamp(period, fromCurrency, toCurrency);
     }
 
@@ -283,6 +286,24 @@ public class DataCollection {
     }
 
     /**
+     * Gets a list of all sentiments associated with all news stories in the database.
+     * @return the response object containing the result
+     * @throws TableEmptyException
+     */
+    public GeneralResponse getSentiments() throws TableEmptyException {
+
+        if (cryptoMapper.getSentiments().size() == 0) {
+
+            throw new TableEmptyException(HttpStatus.NO_CONTENT, "No data found");
+
+        } else /*if (categories == null)*/ {
+
+            ArrayList<CurrenciesSentiments> sentimentsData = cryptoMapper.getSentiments();
+            return new GeneralResponse(HttpStatus.OK, "Sentiment data successfully queried.", sentimentsData);
+        }
+    }
+
+    /**
      * Gets an array of timestamps depending on the pair/exchange combination.
      * @param period the time period to query for
      * @param fromCurrency
@@ -292,6 +313,7 @@ public class DataCollection {
     public Integer[] getTimestampsByPeriod(String period, String fromCurrency, String toCurrency) throws Exception {
 
         checkValidPeriod(period);
+        if (period.equals("day")) period = "date";
         return cryptoMapper.getTimestampsByPeriod(period, fromCurrency, toCurrency);
     }
 
@@ -318,7 +340,7 @@ public class DataCollection {
      */
     public void checkValidPeriod(String period) throws Exception {
 
-        if (!"datehourminute".contains(period)) {
+        if (!"datedayhourminute".contains(period)) {
 
             String message = "\"" + period + "\" is not a valid time period";
             logger.error(message);

@@ -1,5 +1,6 @@
 package CryptocurrencyPriceSentiments.controllers;
 
+import CryptocurrencyPriceSentiments.CryptoMapper;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
 import CryptocurrencyPriceSentiments.models.GeneralResponse;
 import CryptocurrencyPriceSentiments.services.AsyncTasks;
@@ -12,9 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.concurrent.Future;
-
 @RestController
 public class CryptoController {
 
@@ -23,6 +21,12 @@ public class CryptoController {
 
     @Autowired
     AsyncTasks asyncTasks;
+
+    @Autowired
+    SentimentAnalysis sentimentAnalysis;
+
+    @Autowired
+    CryptoMapper cryptoMapper;
 
     // Other possible options are:
     //      aggregate (time period to aggregate over)
@@ -45,6 +49,13 @@ public class CryptoController {
         else asyncTasks.addNews(categories);
 
         return dataCollection.getNews();
+    }
+
+    @GetMapping("/news/getsentiments")
+    public GeneralResponse addSentimentsForCurrencies() throws TableEmptyException {
+
+//        sentimentAnalysis.addSentimentsForCurrencies();
+        return new GeneralResponse(HttpStatus.OK, "OK", cryptoMapper.getSentiments());
     }
 
 //    @RequestMapping("/missingvalues")
