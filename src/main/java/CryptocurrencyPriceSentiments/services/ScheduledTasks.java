@@ -1,5 +1,6 @@
 package CryptocurrencyPriceSentiments.services;
 
+import CryptocurrencyPriceSentiments.TimePeriod;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -9,14 +10,22 @@ import java.util.ArrayList;
 @Service
 public class ScheduledTasks {
 
-    @Autowired
     DataCollection dataCollection;
+    AsyncTasks asyncTasks;
+    private boolean cronHit;
+    protected ArrayList<Integer> timestampDaily;
+    protected ArrayList<Integer> timestampHourly;
+    protected ArrayList<Integer> timestampMinutely;
 
-    private boolean cronHit = false;
-
-    protected ArrayList<Integer> timestampDaily = new ArrayList<>();
-    protected ArrayList<Integer> timestampHourly = new ArrayList<>();
-    protected ArrayList<Integer> timestampMinutely = new ArrayList<>();
+    @Autowired
+    public ScheduledTasks(DataCollection dataCollection, AsyncTasks asyncTasks) {
+        this.dataCollection = dataCollection;
+        this.asyncTasks = asyncTasks;
+        this.cronHit = false;
+        this.timestampDaily = new ArrayList<>();
+        this.timestampHourly = new ArrayList<>();
+        this.timestampMinutely = new ArrayList<>();
+    }
 
     /**
      * Gets the timestamp of midnight of the current day at 0:02.
@@ -25,7 +34,7 @@ public class ScheduledTasks {
     private void queryTimestampDaily() {
 
         int now = (int) (System.currentTimeMillis() / 1000);
-        int midnight = now - DataCollection.SEC_IN_MIN * 2;
+        int midnight = now - TimePeriod.SEC_IN_MIN.getValue() * 2;
         cronHit = true;
 
         timestampDaily.add(midnight);
@@ -34,6 +43,9 @@ public class ScheduledTasks {
         // Resets the global variables.
         cronHit = false;
         timestampDaily.clear();
+
+        // Adds news stories on a daily basis.
+        asyncTasks.addNews();
     }
 
     /**
@@ -44,7 +56,7 @@ public class ScheduledTasks {
     private void queryTimestampHourly() {
 
         int now = (int) (System.currentTimeMillis() / 1000);
-        int hour = now - DataCollection.SEC_IN_MIN;
+        int hour = now - TimePeriod.SEC_IN_MIN.getValue();
         cronHit = true;
 
         timestampHourly.add(hour);
@@ -65,7 +77,7 @@ public class ScheduledTasks {
         cronHit = true;
 
         for (int j = 0; j < 5; j++) {
-            timestampMinutely.add(now - DataCollection.SEC_IN_MIN * j);
+            timestampMinutely.add(now - TimePeriod.SEC_IN_MIN.getValue() * j);
         }
 
         dataCollection.switchCronOps("minute");

@@ -1,8 +1,7 @@
 package CryptocurrencyPriceSentiments;
 
-import CryptocurrencyPriceSentiments.models.CurrenciesSentiments;
+import CryptocurrencyPriceSentiments.models.sentiment_analysis.CurrencySentiment;
 import CryptocurrencyPriceSentiments.models.Data;
-import CryptocurrencyPriceSentiments.models.WatsonTones;
 import org.apache.ibatis.annotations.*;
 
 import java.util.ArrayList;
@@ -13,19 +12,19 @@ public interface CryptoMapper {
     String SELECT_NEWS_BY_CATEGORY = "SELECT * FROM `komodoDB`.`news` WHERE categories LIKE '%${category}%';";
 
     // Adds data to the date table.
-    @Insert("INSERT INTO `crypto-compare`.`data_by_date` " +
+    @Insert("INSERT IGNORE INTO `crypto-compare`.`data_by_date` " +
             "(`time`, `fromCurrency`, `toCurrency`, `close`, `high`, `low`, `volumeFrom`, `volumeTo`) " +
             "VALUES (#{time}, #{fromCurrency}, #{toCurrency}, #{close}, #{high}, #{low}, #{volumefrom}, #{volumeto});")
     public int addPriceByDate(Data dataByDate);
 
     // Adds data to the hour table.
-    @Insert("INSERT INTO `crypto-compare`.`data_by_hour` " +
+    @Insert("INSERT IGNORE INTO `crypto-compare`.`data_by_hour` " +
             "(`time`, `fromCurrency`, `toCurrency`, `close`, `high`, `low`, `volumeFrom`, `volumeTo`) " +
             "VALUES (#{time}, #{fromCurrency}, #{toCurrency}, #{close}, #{high}, #{low}, #{volumefrom}, #{volumeto});")
     public int addPriceByHour(Data dataByHour);
 
     // Adds data to the minute table.
-    @Insert("INSERT INTO `crypto-compare`.`data_by_minute` " +
+    @Insert("INSERT IGNORE INTO `crypto-compare`.`data_by_minute` " +
             "(`time`, `fromCurrency`, `toCurrency`, `close`, `high`, `low`, `volumeFrom`, `volumeTo`) " +
             "VALUES (#{time}, #{fromCurrency}, #{toCurrency}, #{close}, #{high}, #{low}, #{volumefrom}, #{volumeto});")
     public int addPriceByMinute(Data dataByMinute);
@@ -82,6 +81,10 @@ public interface CryptoMapper {
     @Select("SELECT * FROM `crypto-compare`.`news` LIMIT 50;")
     public ArrayList<CryptocurrencyPriceSentiments.models.news.Data> getNews();
 
+    // Gets news by category.
+    @Select("SELECT * FROM `crypto-compare`.`news` WHERE `categories` LIKE CONCAT('%', #{categories}, '%');")
+    public ArrayList<CryptocurrencyPriceSentiments.models.news.Data> getNewsByCategory(String categories);
+
     // Gets the number of currencies being traded.
     @Select("SELECT COUNT(id) FROM `crypto-compare`.`currencies`;")
     public int getNumCurrencies();
@@ -94,26 +97,22 @@ public interface CryptoMapper {
     @Select("SELECT CONCAT(`from_symbol`, '/', `to_symbol`) FROM `crypto-compare`.`currency_pairs`;")
     public String[] getCurrencyPairs();
 
-    // Gets news by category.
-    @Select("SELECT * FROM `crypto-compare`.`news` WHERE `categories` LIKE #{categories};")
-    public ArrayList<CryptocurrencyPriceSentiments.models.news.Data> getNewsByCategory(String categories);
-
     // Adds sentiment data.
-    @Insert("INSERT INTO `crypto-compare`.`currencies_sentiments` (`currency_symbol`, `published_on`, `sentiment`, `score`) " +
+    @Insert("INSERT IGNORE INTO `crypto-compare`.`currencies_sentiments` (`currency_symbol`, `published_on`, `sentiment`, `score`) " +
             "VALUES (#{currencySymbol}, #{publishedOn}, #{sentiment}, #{score});")
-    public int addSentiments(CurrenciesSentiments sentiment);
-
-    // Gets a list of tone names that Watson returns.
-    @Select("SELECT `tone` FROM `crypto-compare`.`watson_tones`;")
-    public String[] getToneNames();
+    public int addSentiments(CurrencySentiment sentiment);
 
     // Gets all sentiments associated with all news stories.
     @Select("SELECT * FROM `crypto-compare`.`currencies_sentiments` LIMIT 50;")
-    @Results(id = "CurrenciesSentiments", value = {
+    @Results(id = "CurrencySentiment", value = {
             @Result(column = "id", property = "id"),
             @Result(column = "currency_symbol", property = "currencySymbol"),
             @Result(column = "published_on", property = "publishedOn"),
             @Result(column = "sentiment", property = "sentiment"),
             @Result(column = "score", property = "score")})
-    public ArrayList<CurrenciesSentiments> getSentiments();
+    public ArrayList<CurrencySentiment> getSentiments();
+
+    // Gets a list of tone names that Watson returns.
+    @Select("SELECT `tone` FROM `crypto-compare`.`watson_tones`;")
+    public String[] getToneNames();
 }

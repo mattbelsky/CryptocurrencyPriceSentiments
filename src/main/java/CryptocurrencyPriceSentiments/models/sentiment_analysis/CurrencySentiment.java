@@ -1,24 +1,30 @@
-package CryptocurrencyPriceSentiments.models;
+package CryptocurrencyPriceSentiments.models.sentiment_analysis;
 
-public class CurrenciesSentiments {
+public class CurrencySentiment {
 
-    // NOTE: @JsonProperty annotation does not work here, and I don't know why.
-    // JSON result returns "currencySymbol" and "publishedOn" as null and 0, respectively.
-    // I fixed the issue in the mapper by adding a custom result map, but it's not an ideal fix if this app is scaled.
+    /*  NOTE: @JsonProperty annotation does not work here, and I don't know why.
+        JSON result returns "currencySymbol" and "publishedOn" as null and 0, respectively, despite annotating these two
+        properties with this format:
+            @JsonProperty("currency_symbol")
+            String currencySymbol;
+        I fixed the issue in the mapper by adding a custom result map, but it may not be the ideal solution.
+        */
+
     int id;
     String currencySymbol;
     int publishedOn;
     String sentiment;
     double score;
+    String direction;
 
-    public CurrenciesSentiments(String currencySymbol, int publishedOn, String sentiment, double score) {
+    public CurrencySentiment(String currencySymbol, int publishedOn, String sentiment, double score) {
         this.currencySymbol = currencySymbol;
         this.publishedOn = publishedOn;
         this.sentiment = sentiment;
         this.score = score;
     }
 
-    public CurrenciesSentiments() {}
+    public CurrencySentiment() {}
 
     public int getId() {
         return id;
@@ -54,5 +60,13 @@ public class CurrenciesSentiments {
 
     public void setScore(double score) {
         this.score = score;
+    }
+
+    public String getDirection() {
+        return direction;
+    }
+
+    public void setDirection(String direction) {
+        this.direction = direction;
     }
 }

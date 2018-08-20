@@ -20,16 +20,17 @@ import java.util.concurrent.Future;
 @Async
 public class AsyncTasks {
 
-    Logger logger = LoggerFactory.getLogger(this.getClass());
     RestTemplate restTemplate;
     DataCollection dataCollection;
     CryptoMapper cryptoMapper;
+    Logger logger;
 
     @Autowired
     public AsyncTasks(RestTemplate restTemplate, DataCollection dataCollection, CryptoMapper cryptoMapper) {
         this.restTemplate = restTemplate;
         this.dataCollection = dataCollection;
         this.cryptoMapper = cryptoMapper;
+        this.logger = LoggerFactory.getLogger(this.getClass());
     }
 
     /**

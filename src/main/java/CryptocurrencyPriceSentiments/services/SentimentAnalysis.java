@@ -2,7 +2,7 @@ package CryptocurrencyPriceSentiments.services;
 
 import CryptocurrencyPriceSentiments.CryptoMapper;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
-import CryptocurrencyPriceSentiments.models.CurrenciesSentiments;
+import CryptocurrencyPriceSentiments.models.sentiment_analysis.CurrencySentiment;
 import CryptocurrencyPriceSentiments.models.news.Data;
 import com.ibm.watson.developer_cloud.tone_analyzer.v3.ToneAnalyzer;
 import com.ibm.watson.developer_cloud.tone_analyzer.v3.model.ToneAnalysis;
@@ -54,6 +54,8 @@ public class SentimentAnalysis {
     /**
      * Gets a list of news stories associated with each currency, calls the analyzeTone() method to return a sentiment
      * for each story, and persists data related to each story and its sentiment to the database.
+     * NOTE: Articles will often return multiple sentiments, which is why there are more sentiment values for a
+     * particular currency than articles.
      * @throws TableEmptyException
      */
     public void addSentimentsForCurrencies() throws TableEmptyException {
@@ -78,7 +80,7 @@ public class SentimentAnalysis {
                         String sentiment = tone.getToneId();
                         double score = tone.getScore();
 
-                        cryptoMapper.addSentiments(new CurrenciesSentiments(currency, publishedOn, sentiment, score));
+                        cryptoMapper.addSentiments(new CurrencySentiment(currency, publishedOn, sentiment, score));
                     }
                 }
             }

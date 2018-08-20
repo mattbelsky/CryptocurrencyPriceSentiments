@@ -1,6 +1,6 @@
 package CryptocurrencyPriceSentiments.models;
 
-public class WatsonTones {
+public class WatsonTone {
 
     private int id;
     private String tone;

@@ -1,13 +1,12 @@
 package CryptocurrencyPriceSentiments.services;
 
 import CryptocurrencyPriceSentiments.CryptoMapper;
+import CryptocurrencyPriceSentiments.TimePeriod;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
-import CryptocurrencyPriceSentiments.models.CurrenciesSentiments;
+import CryptocurrencyPriceSentiments.models.sentiment_analysis.CurrencySentiment;
 import CryptocurrencyPriceSentiments.models.Data;
 import CryptocurrencyPriceSentiments.models.GeneralResponse;
 import CryptocurrencyPriceSentiments.models.PriceHistorical;
-import CryptocurrencyPriceSentiments.models.news.News;
-import org.apache.ibatis.jdbc.Null;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,16 +21,18 @@ import java.util.ArrayList;
 @Service
 public class DataCollection {
 
-    @Autowired
     RestTemplate restTemplate;
-
-    @Autowired
     ScheduledTasks scheduledTasks;
+    CryptoMapper cryptoMapper;
+    Logger logger;
 
     @Autowired
-    CryptoMapper cryptoMapper;
-
-    Logger logger = LoggerFactory.getLogger(this.getClass());
+    public DataCollection(RestTemplate restTemplate, ScheduledTasks scheduledTasks, CryptoMapper cryptoMapper) {
+        this.restTemplate = restTemplate;
+        this.scheduledTasks = scheduledTasks;
+        this.cryptoMapper = cryptoMapper;
+        this.logger = LoggerFactory.getLogger(this.getClass());
+    }
 
     // The time periods to query for
     private static String[] periods = {
@@ -39,10 +40,6 @@ public class DataCollection {
             "hour",
             "minute"
     };
-
-    final static int HOURS_IN_DAY = 24;
-    final static int MIN_IN_HOUR = 60;
-    final static int SEC_IN_MIN = 60;
 
     /**
      * Gets a list of currency pairs being traded.
@@ -249,7 +246,7 @@ public class DataCollection {
      * @return a response object containing news data
      * @throws TableEmptyException a custom exception thrown when a database table is empty
      */
-    public GeneralResponse getNews() throws TableEmptyException {
+    public ArrayList<CryptocurrencyPriceSentiments.models.news.Data> getNews() throws TableEmptyException {
 
         // Throws an exception if the news table is empty.
         if (cryptoMapper.getNews().size() == 0) {
@@ -259,7 +256,7 @@ public class DataCollection {
         } else /*if (categories == null)*/{
 
             ArrayList<CryptocurrencyPriceSentiments.models.news.Data> newsData = cryptoMapper.getNews();
-            return new GeneralResponse(HttpStatus.OK, "News data successfully queried.", newsData);
+            return newsData;
 //        } else {
 //
 //            // Gets a list of news stories by each of the user-input categories.
@@ -290,7 +287,7 @@ public class DataCollection {
      * @return the response object containing the result
      * @throws TableEmptyException
      */
-    public GeneralResponse getSentiments() throws TableEmptyException {
+    public ArrayList<CurrencySentiment> getSentiments() throws TableEmptyException {
 
         if (cryptoMapper.getSentiments().size() == 0) {
 
@@ -298,8 +295,8 @@ public class DataCollection {
 
         } else /*if (categories == null)*/ {
 
-            ArrayList<CurrenciesSentiments> sentimentsData = cryptoMapper.getSentiments();
-            return new GeneralResponse(HttpStatus.OK, "Sentiment data successfully queried.", sentimentsData);
+            ArrayList<CurrencySentiment> sentimentsData = cryptoMapper.getSentiments();
+            return sentimentsData;
         }
     }
 
@@ -326,11 +323,11 @@ public class DataCollection {
 
         switch (period) {
             case "day":
-                return HOURS_IN_DAY * MIN_IN_HOUR * SEC_IN_MIN;
+                return TimePeriod.SEC_IN_DAY.getValue();
             case "hour":
-                return MIN_IN_HOUR * SEC_IN_MIN;
+                return TimePeriod.SEC_IN_HOUR.getValue();
             default:
-                return MIN_IN_HOUR;
+                return TimePeriod.SEC_IN_MIN.getValue();
         }
     }
 
