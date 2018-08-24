@@ -2,7 +2,10 @@ package CryptocurrencyPriceSentiments;
 
 import CryptocurrencyPriceSentiments.models.sentiment_analysis.CurrencySentiment;
 import CryptocurrencyPriceSentiments.models.Data;
+import CryptocurrencyPriceSentiments.models.sentiment_analysis.PriceChangeDbEntity;
+import CryptocurrencyPriceSentiments.models.sentiment_analysis.PriceChangeSummary;
 import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.mapping.StatementType;
 
 import java.util.ArrayList;
 
@@ -115,4 +118,23 @@ public interface CryptoMapper {
     // Gets a list of tone names that Watson returns.
     @Select("SELECT `tone` FROM `crypto-compare`.`watson_tones`;")
     public String[] getToneNames();
+
+    // Calls a stored procedure that generates a view joining several tables and selects price change summary data from
+    // this view based on the supplied currency and sentiment direction (positive or negative).
+    @Select("CALL `crypto-compare`.getClosingPriceByCurrencyAndToneDirection(" +
+            "#{inCurrencyName, mode = IN, jdbcType = VARCHAR}, " +
+            "#{inToneDirection, mode = IN, jdbcType = VARCHAR}, " +
+            "#{outCurrencyName, mode = OUT, jdbcType = VARCHAR}, " +
+            "#{outToneDirection, mode = OUT, jdbcType = VARCHAR}, " +
+            "#{outProportionSuccess, mode = OUT, jdbcType = DECIMAL});")
+    @Results(value = {
+            @Result(column = "inCurrencyName", property = "inCurrencyName"),
+            @Result(column = "inToneDirection", property = "inToneDirection"),
+            @Result(column = "outCurrencyName", property = "outCurrencyName"),
+            @Result(column = "outToneDirection", property = "outToneDirection"),
+            @Result(column = "outProportionSuccess", property = "outProportionSuccess")
+            })
+    @ResultType(PriceChangeDbEntity.class)
+    @Options(statementType = StatementType.CALLABLE)
+    public PriceChangeDbEntity getPriceChangeByCurrencyAndToneDirection(PriceChangeDbEntity params);
 }

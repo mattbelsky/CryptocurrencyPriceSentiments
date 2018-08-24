@@ -4,6 +4,7 @@ import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
 import CryptocurrencyPriceSentiments.models.GeneralResponse;
 import CryptocurrencyPriceSentiments.services.AsyncTasks;
 import CryptocurrencyPriceSentiments.services.DataCollection;
+import CryptocurrencyPriceSentiments.services.HypothesisTest;
 import CryptocurrencyPriceSentiments.services.SentimentAnalysis;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -18,12 +19,15 @@ public class CryptoController {
     DataCollection dataCollection;
     AsyncTasks asyncTasks;
     SentimentAnalysis sentimentAnalysis;
+    HypothesisTest hypothesisTest;
 
     @Autowired
-    public CryptoController(DataCollection dataCollection, AsyncTasks asyncTasks, SentimentAnalysis sentimentAnalysis) {
+    public CryptoController(DataCollection dataCollection, AsyncTasks asyncTasks, SentimentAnalysis sentimentAnalysis,
+                            HypothesisTest hypothesisTest) {
         this.dataCollection = dataCollection;
         this.asyncTasks = asyncTasks;
         this.sentimentAnalysis = sentimentAnalysis;
+        this.hypothesisTest = hypothesisTest;
     }
 
     // Other possible options are:
@@ -35,6 +39,7 @@ public class CryptoController {
     @GetMapping("/gethistory")
     public GeneralResponse addPriceHistorical(@RequestParam(value = "period") String period,
                                               @RequestParam(value = "numrecords") int numRecords) throws Exception {
+
         asyncTasks.backloadData(period, numRecords);
         return new GeneralResponse(HttpStatus.OK, "Data loaded.");
     }
@@ -61,6 +66,13 @@ public class CryptoController {
 
         sentimentAnalysis.addSentimentsForCurrencies();
         return new GeneralResponse(HttpStatus.OK, "News sentiments successfully added.", dataCollection.getSentiments());
+    }
+
+    @GetMapping("news/sentimentssummary")
+    public GeneralResponse getProportionOfSuccesses() {
+
+        return new GeneralResponse(HttpStatus.OK, "Sentiments summary data successfully retrieved.",
+                hypothesisTest.calculateProportionOfSuccesses());
     }
 
 //    @RequestMapping("/missingvalues")

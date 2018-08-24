@@ -21,18 +21,20 @@ import java.util.ArrayList;
 @Service
 public class DataCollection {
 
-    RestTemplate restTemplate;
-    ScheduledTasks scheduledTasks;
-    CryptoMapper cryptoMapper;
-    Logger logger;
+    /*  NOTE -- Beware circular dependencies!
+        Autowiring constructors in both this class and in ScheduledTasks results in one.
+        Only field injection works here. */
 
     @Autowired
-    public DataCollection(RestTemplate restTemplate, ScheduledTasks scheduledTasks, CryptoMapper cryptoMapper) {
-        this.restTemplate = restTemplate;
-        this.scheduledTasks = scheduledTasks;
-        this.cryptoMapper = cryptoMapper;
-        this.logger = LoggerFactory.getLogger(this.getClass());
-    }
+    RestTemplate restTemplate;
+
+    @Autowired
+    ScheduledTasks scheduledTasks;
+
+    @Autowired
+    CryptoMapper cryptoMapper;
+
+    Logger logger = LoggerFactory.getLogger(this.getClass());
 
     // The time periods to query for
     private static String[] periods = {
