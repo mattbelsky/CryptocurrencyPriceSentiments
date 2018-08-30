@@ -60,8 +60,8 @@ public class HypothesisTest {
     public DirectionResponseWrapper[] calculateProportionOfSuccesses() {
 
         ArrayList<String> currencies = cryptoMapper.getCurrencies();
-        ArrayList<PriceChangeDbEntity> priceChangePositive = new ArrayList<>();
-        ArrayList<PriceChangeDbEntity> priceChangeNegative = new ArrayList<>();
+        ArrayList<PriceChangeSummary> priceChangePositive = new ArrayList<>();
+        ArrayList<PriceChangeSummary> priceChangeNegative = new ArrayList<>();
         DirectionResponseWrapper[] responseWrapper = new DirectionResponseWrapper[2];
 
         for (String currency : currencies) {
@@ -70,16 +70,21 @@ public class HypothesisTest {
 
             PriceChangeDbEntity priceChangeDbEntityPositive = new PriceChangeDbEntity(currency, "positive");
             cryptoMapper.getPriceChangeByCurrencyAndToneDirection(priceChangeDbEntityPositive);
-            priceChangePositive.add(priceChangeDbEntityPositive);
+            priceChangePositive.add(convertPriceChangeDbEntitytoSummary(priceChangeDbEntityPositive));
 
             PriceChangeDbEntity priceChangeDbEntityNegative = new PriceChangeDbEntity(currency, "negative");
             cryptoMapper.getPriceChangeByCurrencyAndToneDirection(priceChangeDbEntityNegative);
-            priceChangeNegative.add(priceChangeDbEntityNegative);
+            priceChangeNegative.add(convertPriceChangeDbEntitytoSummary(priceChangeDbEntityNegative));
         }
 
         responseWrapper[0] = new DirectionResponseWrapper("positive", priceChangePositive);
         responseWrapper[1] = new DirectionResponseWrapper("negative", priceChangeNegative);
 
         return responseWrapper;
+    }
+
+    public PriceChangeSummary convertPriceChangeDbEntitytoSummary(PriceChangeDbEntity dbEntity) {
+        return new PriceChangeSummary(dbEntity.getOutCurrencyName(), dbEntity.getOutToneDirection(),
+                dbEntity.getOutProportionSuccess());
     }
 }

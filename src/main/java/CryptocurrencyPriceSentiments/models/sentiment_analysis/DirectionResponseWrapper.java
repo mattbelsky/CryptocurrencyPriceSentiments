@@ -5,9 +5,9 @@ import java.util.ArrayList;
 public class DirectionResponseWrapper {
 
     String direction;
-    ArrayList<PriceChangeDbEntity> priceChangeSummary;
+    ArrayList<PriceChangeSummary> priceChangeSummary;
 
-    public DirectionResponseWrapper(String direction, ArrayList<PriceChangeDbEntity> priceChangeSummary) {
+    public DirectionResponseWrapper(String direction, ArrayList<PriceChangeSummary> priceChangeSummary) {
         this.direction = direction;
         this.priceChangeSummary = priceChangeSummary;
     }
@@ -23,11 +23,11 @@ public class DirectionResponseWrapper {
         this.direction = direction;
     }
 
-    public ArrayList<PriceChangeDbEntity> getPriceChangeSummary() {
+    public ArrayList<PriceChangeSummary> getPriceChangeSummary() {
         return priceChangeSummary;
     }
 
-    public void setPriceChangeSummary(ArrayList<PriceChangeDbEntity> priceChangeSummary) {
+    public void setPriceChangeSummary(ArrayList<PriceChangeSummary> priceChangeSummary) {
         this.priceChangeSummary = priceChangeSummary;
     }
 }
