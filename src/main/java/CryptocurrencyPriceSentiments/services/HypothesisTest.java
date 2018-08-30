@@ -66,12 +66,15 @@ public class HypothesisTest {
 
         for (String currency : currencies) {
 
-            priceChangePositive.add(
-                    cryptoMapper.getPriceChangeByCurrencyAndToneDirection(
-                            new PriceChangeDbEntity(currency, "positive")));
-            priceChangeNegative.add(
-                    cryptoMapper.getPriceChangeByCurrencyAndToneDirection(
-                            new PriceChangeDbEntity(currency, "negative")));
+            if (currency.equals("USD")) continue;
+
+            PriceChangeDbEntity priceChangeDbEntityPositive = new PriceChangeDbEntity(currency, "positive");
+            cryptoMapper.getPriceChangeByCurrencyAndToneDirection(priceChangeDbEntityPositive);
+            priceChangePositive.add(priceChangeDbEntityPositive);
+
+            PriceChangeDbEntity priceChangeDbEntityNegative = new PriceChangeDbEntity(currency, "negative");
+            cryptoMapper.getPriceChangeByCurrencyAndToneDirection(priceChangeDbEntityNegative);
+            priceChangeNegative.add(priceChangeDbEntityNegative);
         }
 
         responseWrapper[0] = new DirectionResponseWrapper("positive", priceChangePositive);

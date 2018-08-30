@@ -1,7 +1,9 @@
 package CryptocurrencyPriceSentiments.controllers;
 
+import CryptocurrencyPriceSentiments.CryptoMapper;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
 import CryptocurrencyPriceSentiments.models.GeneralResponse;
+import CryptocurrencyPriceSentiments.models.sentiment_analysis.PriceChangeDbEntity;
 import CryptocurrencyPriceSentiments.services.AsyncTasks;
 import CryptocurrencyPriceSentiments.services.DataCollection;
 import CryptocurrencyPriceSentiments.services.HypothesisTest;
@@ -29,6 +31,9 @@ public class CryptoController {
         this.sentimentAnalysis = sentimentAnalysis;
         this.hypothesisTest = hypothesisTest;
     }
+
+    @Autowired
+    CryptoMapper cryptoMapper;
 
     // Other possible options are:
     //      aggregate (time period to aggregate over)
@@ -61,11 +66,16 @@ public class CryptoController {
         return new GeneralResponse(HttpStatus.OK, "News data successfully retrieved.", dataCollection.getNews());
     }
 
-    @GetMapping("/news/getsentiments")
+    @PostMapping("/news/sentiments")
     public GeneralResponse addSentimentsForCurrencies() throws TableEmptyException {
 
         sentimentAnalysis.addSentimentsForCurrencies();
         return new GeneralResponse(HttpStatus.OK, "News sentiments successfully added.", dataCollection.getSentiments());
+    }
+
+    @GetMapping("/news/sentiments")
+    public GeneralResponse getSentiments() throws TableEmptyException {
+        return new GeneralResponse(HttpStatus.OK, "News sentiments successfully retrieved.", dataCollection.getSentiments());
     }
 
     @GetMapping("news/sentimentssummary")

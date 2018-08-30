@@ -6,11 +6,22 @@ public class PriceChangeDbEntity {
     String inToneDirection;
     String outCurrencyName;
     String outToneDirection;
-    double outProportionSuccess;
+    Double outProportionSuccess;
+
+    public PriceChangeDbEntity(String inCurrencyName, String inToneDirection, String outCurrencyName, String outToneDirection, Double outProportionSuccess) {
+        this.inCurrencyName = inCurrencyName;
+        this.inToneDirection = inToneDirection;
+        this.outCurrencyName = outCurrencyName;
+        this.outToneDirection = outToneDirection;
+        this.outProportionSuccess = outProportionSuccess;
+    }
 
     public PriceChangeDbEntity(String inCurrencyName, String inToneDirection) {
         this.inCurrencyName = inCurrencyName;
         this.inToneDirection = inToneDirection;
+        this.outCurrencyName = null;
+        this.outToneDirection = null;
+        this.outProportionSuccess = null;
     }
 
     public PriceChangeDbEntity() {
@@ -48,11 +59,11 @@ public class PriceChangeDbEntity {
         this.outToneDirection = outToneDirection;
     }
 
-    public double getOutProportionSuccess() {
+    public Double getOutProportionSuccess() {
         return outProportionSuccess;
     }
 
-    public void setOutProportionSuccess(double outProportionSuccess) {
+    public void setOutProportionSuccess(Double outProportionSuccess) {
         this.outProportionSuccess = outProportionSuccess;
     }
 }

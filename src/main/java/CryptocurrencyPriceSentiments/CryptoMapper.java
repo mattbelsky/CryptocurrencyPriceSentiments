@@ -106,13 +106,18 @@ public interface CryptoMapper {
     public int addSentiments(CurrencySentiment sentiment);
 
     // Gets all sentiments associated with all news stories.
-    @Select("SELECT * FROM `crypto-compare`.`currencies_sentiments` LIMIT 50;")
+    @Select("SELECT cs.*, wt.`direction` " +
+            "FROM `crypto-compare`.`currencies_sentiments` cs " +
+            "JOIN `crypto-compare`.`watson_tones` wt " +
+            "ON cs.`sentiment` = wt.`tone` " +
+            "LIMIT 50;")
     @Results(id = "CurrencySentiment", value = {
             @Result(column = "id", property = "id"),
             @Result(column = "currency_symbol", property = "currencySymbol"),
             @Result(column = "published_on", property = "publishedOn"),
             @Result(column = "sentiment", property = "sentiment"),
-            @Result(column = "score", property = "score")})
+            @Result(column = "score", property = "score"),
+            @Result(column = "direction", property = "direction")})
     public ArrayList<CurrencySentiment> getSentiments();
 
     // Gets a list of tone names that Watson returns.
@@ -121,12 +126,14 @@ public interface CryptoMapper {
 
     // Calls a stored procedure that generates a view joining several tables and selects price change summary data from
     // this view based on the supplied currency and sentiment direction (positive or negative).
-    @Select("CALL `crypto-compare`.getClosingPriceByCurrencyAndToneDirection(" +
-            "#{inCurrencyName, mode = IN, jdbcType = VARCHAR}, " +
-            "#{inToneDirection, mode = IN, jdbcType = VARCHAR}, " +
-            "#{outCurrencyName, mode = OUT, jdbcType = VARCHAR}, " +
-            "#{outToneDirection, mode = OUT, jdbcType = VARCHAR}, " +
-            "#{outProportionSuccess, mode = OUT, jdbcType = DECIMAL});")
+    // NOTE: Return type for a stored procedure call must be void! Please see the corresponding service logic for the
+    // proper usage or see the simpler example at https://github.com/ersanjayverma/spring-mybatis-oracle-storedproc
+    @Select("{CALL `crypto-compare`.getClosingPriceByCurrencyAndToneDirection(" +
+            "#{inCurrencyName, mode = IN, javaType = java.lang.String, jdbcType = VARCHAR}, " +
+            "#{inToneDirection, mode = IN, javaType = java.lang.String, jdbcType = VARCHAR}, " +
+            "#{outCurrencyName, mode = OUT, javaType = java.lang.String, jdbcType = VARCHAR}, " +
+            "#{outToneDirection, mode = OUT, javaType = java.lang.String, jdbcType = VARCHAR}, " +
+            "#{outProportionSuccess, mode = OUT, javaType = java.lang.Double, jdbcType = DOUBLE})}")
     @Results(value = {
             @Result(column = "inCurrencyName", property = "inCurrencyName"),
             @Result(column = "inToneDirection", property = "inToneDirection"),
@@ -136,5 +143,5 @@ public interface CryptoMapper {
             })
     @ResultType(PriceChangeDbEntity.class)
     @Options(statementType = StatementType.CALLABLE)
-    public PriceChangeDbEntity getPriceChangeByCurrencyAndToneDirection(PriceChangeDbEntity params);
+    public void getPriceChangeByCurrencyAndToneDirection(PriceChangeDbEntity params);
 }
