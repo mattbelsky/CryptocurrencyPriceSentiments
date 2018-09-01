@@ -70,11 +70,11 @@ public class HypothesisTest {
 
             PriceChangeDbEntity priceChangeDbEntityPositive = new PriceChangeDbEntity(currency, "positive");
             cryptoMapper.getPriceChangeByCurrencyAndToneDirection(priceChangeDbEntityPositive);
-            priceChangePositive.add(convertPriceChangeDbEntitytoSummary(priceChangeDbEntityPositive));
+            priceChangePositive.add(convertPriceChangeDbEntityToSummary(priceChangeDbEntityPositive));
 
             PriceChangeDbEntity priceChangeDbEntityNegative = new PriceChangeDbEntity(currency, "negative");
             cryptoMapper.getPriceChangeByCurrencyAndToneDirection(priceChangeDbEntityNegative);
-            priceChangeNegative.add(convertPriceChangeDbEntitytoSummary(priceChangeDbEntityNegative));
+            priceChangeNegative.add(convertPriceChangeDbEntityToSummary(priceChangeDbEntityNegative));
         }
 
         responseWrapper[0] = new DirectionResponseWrapper("positive", priceChangePositive);
@@ -83,7 +83,7 @@ public class HypothesisTest {
         return responseWrapper;
     }
 
-    public PriceChangeSummary convertPriceChangeDbEntitytoSummary(PriceChangeDbEntity dbEntity) {
+    public PriceChangeSummary convertPriceChangeDbEntityToSummary(PriceChangeDbEntity dbEntity) {
         return new PriceChangeSummary(dbEntity.getOutCurrencyName(), dbEntity.getOutToneDirection(),
                 dbEntity.getOutProportionSuccess());
     }

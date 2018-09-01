@@ -1,6 +1,8 @@
 package CryptocurrencyPriceSentiments.controllers;
 
 import CryptocurrencyPriceSentiments.CryptoMapper;
+import CryptocurrencyPriceSentiments.exceptions.InvalidDirectionException;
+import CryptocurrencyPriceSentiments.exceptions.InvalidToneException;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
 import CryptocurrencyPriceSentiments.models.GeneralResponse;
 import CryptocurrencyPriceSentiments.models.sentiment_analysis.PriceChangeDbEntity;
@@ -80,9 +82,23 @@ public class CryptoController {
 
     @GetMapping("news/sentimentssummary")
     public GeneralResponse getProportionOfSuccesses() {
-
         return new GeneralResponse(HttpStatus.OK, "Sentiments summary data successfully retrieved.",
                 hypothesisTest.calculateProportionOfSuccesses());
+    }
+
+    @GetMapping("/watsontones/all")
+    public GeneralResponse getAllWatsonTones() {
+        return new GeneralResponse(HttpStatus.OK, "Watson tones successfully returned.",
+                sentimentAnalysis.getAllWatsonTones());
+    }
+
+    @GetMapping("watsontones/update")
+    public GeneralResponse updateWatsonToneDirection(@RequestParam("tone") String tone,
+                                                     @RequestParam("direction") String direction)
+            throws InvalidDirectionException, InvalidToneException {
+
+        return new GeneralResponse(HttpStatus.OK, "Watson tone direction successfully updated.",
+                sentimentAnalysis.updateWatsonToneDirection(tone, direction));
     }
 
 //    @RequestMapping("/missingvalues")

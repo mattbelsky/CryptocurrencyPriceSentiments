@@ -10,8 +10,17 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(value = TableEmptyException.class)
-    protected @ResponseBody
-    GeneralResponse tableEmptyError(TableEmptyException ex) {
+    protected @ResponseBody GeneralResponse tableEmptyError(TableEmptyException ex) {
+        return new GeneralResponse(ex.getHttpStatus(), ex.getMessage());
+    }
+
+    @ExceptionHandler(value = InvalidToneException.class)
+    protected @ResponseBody GeneralResponse invalidToneException(InvalidToneException ex) {
+        return new GeneralResponse(ex.getHttpStatus(), ex.getMessage());
+    }
+
+    @ExceptionHandler(value = InvalidDirectionException.class)
+    protected @ResponseBody GeneralResponse invalidDirectionException(InvalidDirectionException ex) {
         return new GeneralResponse(ex.getHttpStatus(), ex.getMessage());
     }
 }

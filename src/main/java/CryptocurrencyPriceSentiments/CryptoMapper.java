@@ -1,5 +1,6 @@
 package CryptocurrencyPriceSentiments;
 
+import CryptocurrencyPriceSentiments.models.WatsonTone;
 import CryptocurrencyPriceSentiments.models.sentiment_analysis.CurrencySentiment;
 import CryptocurrencyPriceSentiments.models.Data;
 import CryptocurrencyPriceSentiments.models.sentiment_analysis.PriceChangeDbEntity;
@@ -122,7 +123,15 @@ public interface CryptoMapper {
 
     // Gets a list of tone names that Watson returns.
     @Select("SELECT `tone` FROM `crypto-compare`.`watson_tones`;")
-    public String[] getToneNames();
+    public ArrayList<String> getToneNames();
+
+    // Gets all data associated with Watson tones.
+    @Select("SELECT * FROM `crypto-compare`.`watson_tones`;")
+    public ArrayList<WatsonTone> getAllWatsonTones();
+
+    // Updates the direction associated with a particular tone.
+    @Update("UPDATE `crypto-compare`.`watson_tones` SET `direction` = #{arg1} WHERE `tone` = #{arg0};")
+    public int updateWatsonToneDirection(String tone, String direction);
 
     // Calls a stored procedure that generates a view joining several tables and selects price change summary data from
     // this view based on the supplied currency and sentiment direction (positive or negative).

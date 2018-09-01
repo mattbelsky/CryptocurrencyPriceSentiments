@@ -1,7 +1,10 @@
 package CryptocurrencyPriceSentiments.services;
 
 import CryptocurrencyPriceSentiments.CryptoMapper;
+import CryptocurrencyPriceSentiments.exceptions.InvalidDirectionException;
+import CryptocurrencyPriceSentiments.exceptions.InvalidToneException;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
+import CryptocurrencyPriceSentiments.models.WatsonTone;
 import CryptocurrencyPriceSentiments.models.sentiment_analysis.CurrencySentiment;
 import CryptocurrencyPriceSentiments.models.news.Data;
 import com.ibm.watson.developer_cloud.tone_analyzer.v3.ToneAnalyzer;
@@ -10,6 +13,8 @@ import com.ibm.watson.developer_cloud.tone_analyzer.v3.model.ToneOptions;
 import com.ibm.watson.developer_cloud.tone_analyzer.v3.model.ToneScore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -26,6 +31,15 @@ public class SentimentAnalysis {
 
     @Autowired
     CryptoMapper cryptoMapper;
+
+    @Cacheable(value = "WatsonTones")
+    public ArrayList<WatsonTone> getAllWatsonTones() {
+        return cryptoMapper.getAllWatsonTones();
+    }
+
+    public ArrayList<String> getWatsonToneNames() {
+        return cryptoMapper.getToneNames();
+    }
 
     /**
      * Calls Watson Tone Analyzer to analyze the tone of a news story.
@@ -85,5 +99,36 @@ public class SentimentAnalysis {
                 }
             }
         }
+    }
+
+    /**
+     * Updates the specified Watson tone with the specified tone. Throws exceptions if the tone or direction are invalid.
+     * @param direction
+     * @param tone
+     * @return the updated list of Watson tones
+     * @throws InvalidToneException
+     * @throws InvalidDirectionException
+     */
+    public ArrayList<WatsonTone> updateWatsonToneDirection(String tone, String direction)
+            throws InvalidToneException, InvalidDirectionException {
+
+        if (!isValidTone(tone)) throw new InvalidToneException(HttpStatus.BAD_REQUEST, "Invalid tone.");
+
+        if (!direction.equals("positive") && !direction.equals("neutral") && !direction.equals("negative"))
+            throw new InvalidDirectionException(HttpStatus.BAD_REQUEST, "Invalid direction.");
+
+        cryptoMapper.updateWatsonToneDirection(tone, direction);
+        return cryptoMapper.getAllWatsonTones();
+    }
+
+    /**
+     * Checks if the specified Watson tone is valid.
+     * @param tone -- the tone to check
+     * @return
+     */
+    public boolean isValidTone(String tone) {
+
+        if (getWatsonToneNames().contains(tone)) return true;
+        else return false;
     }
 }
