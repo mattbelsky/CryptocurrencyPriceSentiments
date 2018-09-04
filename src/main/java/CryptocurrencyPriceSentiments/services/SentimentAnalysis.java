@@ -112,10 +112,10 @@ public class SentimentAnalysis {
     public ArrayList<WatsonTone> updateWatsonToneDirection(String tone, String direction)
             throws InvalidToneException, InvalidDirectionException {
 
-        if (!isValidTone(tone)) throw new InvalidToneException(HttpStatus.BAD_REQUEST, "Invalid tone.");
+        if (!isValidTone(tone)) throw new InvalidToneException(HttpStatus.BAD_REQUEST, "Invalid tone: " + tone.toUpperCase());
 
         if (!direction.equals("positive") && !direction.equals("neutral") && !direction.equals("negative"))
-            throw new InvalidDirectionException(HttpStatus.BAD_REQUEST, "Invalid direction.");
+            throw new InvalidDirectionException(HttpStatus.BAD_REQUEST, "Invalid direction: " + direction.toUpperCase());
 
         cryptoMapper.updateWatsonToneDirection(tone, direction);
         return cryptoMapper.getAllWatsonTones();

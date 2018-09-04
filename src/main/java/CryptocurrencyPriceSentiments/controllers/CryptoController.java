@@ -88,11 +88,11 @@ public class CryptoController {
 
     @GetMapping("/watsontones/all")
     public GeneralResponse getAllWatsonTones() {
-        return new GeneralResponse(HttpStatus.OK, "Watson tones successfully returned.",
+        return new GeneralResponse(HttpStatus.OK, "Watson tones successfully retrieved.",
                 sentimentAnalysis.getAllWatsonTones());
     }
 
-    @GetMapping("watsontones/update")
+    @GetMapping("/watsontones/update")
     public GeneralResponse updateWatsonToneDirection(@RequestParam("tone") String tone,
                                                      @RequestParam("direction") String direction)
             throws InvalidDirectionException, InvalidToneException {

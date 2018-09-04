@@ -57,6 +57,13 @@ public class HypothesisTest {
 
     Logger logger = LoggerFactory.getLogger(HypothesisTest.class);
 
+    /**
+     * Calculates the proportion of times a positively or negatively toned news story results in a positive or negative
+     * price change, respectively. The tones are the result of analysis performed by Watson Tone Analyzer and persisted
+     * in the database, and each tone's direction (positive, negative, or neutral) is decided initially by whomever
+     * sets up the watson_tones table in the database, although they can be modified later by the user.
+     * @return an array of response wrapper objects that contain proportional data for each currency
+     */
     public DirectionResponseWrapper[] calculateProportionOfSuccesses() {
 
         ArrayList<String> currencies = cryptoMapper.getCurrencies();
@@ -66,8 +73,14 @@ public class HypothesisTest {
 
         for (String currency : currencies) {
 
+            // Price change for each currency is measured as a result of it's change against the USD, therefore USD/USD
+            // is an irrelevant result.
             if (currency.equals("USD")) continue;
 
+            // Because multiple SELECT statements are required for the result, the following calls a MySQL stored
+            // procedure, feeding it the input parameters contained in the PriceChangeDbEntity and assigning the output
+            // parameters to the same object. The rather verbose data contained in this object is streamlined into a
+            // summary object, which is added to the PriceChangeSummary array list.
             PriceChangeDbEntity priceChangeDbEntityPositive = new PriceChangeDbEntity(currency, "positive");
             cryptoMapper.getPriceChangeByCurrencyAndToneDirection(priceChangeDbEntityPositive);
             priceChangePositive.add(convertPriceChangeDbEntityToSummary(priceChangeDbEntityPositive));
@@ -83,6 +96,12 @@ public class HypothesisTest {
         return responseWrapper;
     }
 
+    /**
+     * Gets the desired information from the object associated with the MySQL stored procedure and adds it to a summary
+     * object for returning to the user.
+     * @param dbEntity -- the object associated with the stored procedure containing verbose repetitive data
+     * @return the object containing the summarized data
+     */
     public PriceChangeSummary convertPriceChangeDbEntityToSummary(PriceChangeDbEntity dbEntity) {
         return new PriceChangeSummary(dbEntity.getOutCurrencyName(), dbEntity.getOutToneDirection(),
                 dbEntity.getOutProportionSuccess());
