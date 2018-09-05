@@ -21,12 +21,14 @@ GET: Backloads historical price data for the period "date" or "day", "hour", or 
 /news?categories={categories}
 ```
 POST: Queries CryptoCompare for news data of the specified categories ("categories" is optional) and adds this data to the database.
+
 GET: Retrieves news data from the database. Categories are optional again.
 
 ```
 /news/sentiments
 ```
 POST: Performs sentiment analysis on news stories within the database via the Watson Tone Analyzer and adds this data to the database.
+
 GET: Retrives sentiment data from the database.
 
 ```
