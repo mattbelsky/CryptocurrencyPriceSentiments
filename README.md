@@ -44,7 +44,7 @@ GET: Gets a list of all the Watson tones and their associated information such a
 ```
 /watsontones/update?tone={tone}&direction={direction}
 ```
-GET: Updates the specified tone with the specified direction.
+PUT: Updates the specified tone with the specified direction.
 
 ### Prerequisites
 You will need a user name and password from [IBM Cloud Services](https://www.ibm.com/watson/services/tone-analyzer/) for Watson Tone Analyzer. These should be added to the application.properties file:

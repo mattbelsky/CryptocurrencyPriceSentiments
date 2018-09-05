@@ -12,10 +12,7 @@ import CryptocurrencyPriceSentiments.services.HypothesisTest;
 import CryptocurrencyPriceSentiments.services.SentimentAnalysis;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 public class CryptoController {
@@ -92,7 +89,7 @@ public class CryptoController {
                 sentimentAnalysis.getAllWatsonTones());
     }
 
-    @GetMapping("/watsontones/update")
+    @PutMapping("/watsontones/update")
     public GeneralResponse updateWatsonToneDirection(@RequestParam("tone") String tone,
                                                      @RequestParam("direction") String direction)
             throws InvalidDirectionException, InvalidToneException {
