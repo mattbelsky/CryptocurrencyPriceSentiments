@@ -1,6 +1,6 @@
 package CryptocurrencyPriceSentiments.services;
 
-import CryptocurrencyPriceSentiments.CryptoMapper;
+import CryptocurrencyPriceSentiments.mappers.CryptoMapper;
 import CryptocurrencyPriceSentiments.models.sentiment_analysis.DirectionResponseWrapper;
 import CryptocurrencyPriceSentiments.models.sentiment_analysis.PriceChangeDbEntity;
 import CryptocurrencyPriceSentiments.models.sentiment_analysis.PriceChangeSummary;

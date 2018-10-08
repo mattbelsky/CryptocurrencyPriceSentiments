@@ -23,4 +23,9 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     protected @ResponseBody GeneralResponse invalidDirectionException(InvalidDirectionException ex) {
         return new GeneralResponse(ex.getHttpStatus(), ex.getMessage());
     }
+
+    @ExceptionHandler(value = InvalidUserException.class)
+    protected @ResponseBody GeneralResponse invalidUserException(InvalidUserException ex) {
+        return new GeneralResponse(ex.getHttpStatus(), ex.getMessage());
+    }
 }

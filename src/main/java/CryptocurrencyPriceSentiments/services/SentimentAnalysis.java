@@ -1,6 +1,6 @@
 package CryptocurrencyPriceSentiments.services;
 
-import CryptocurrencyPriceSentiments.CryptoMapper;
+import CryptocurrencyPriceSentiments.mappers.CryptoMapper;
 import CryptocurrencyPriceSentiments.exceptions.InvalidDirectionException;
 import CryptocurrencyPriceSentiments.exceptions.InvalidToneException;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;

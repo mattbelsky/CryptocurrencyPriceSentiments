@@ -1,11 +1,10 @@
 package CryptocurrencyPriceSentiments.controllers;
 
-import CryptocurrencyPriceSentiments.CryptoMapper;
+import CryptocurrencyPriceSentiments.mappers.CryptoMapper;
 import CryptocurrencyPriceSentiments.exceptions.InvalidDirectionException;
 import CryptocurrencyPriceSentiments.exceptions.InvalidToneException;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
 import CryptocurrencyPriceSentiments.models.GeneralResponse;
-import CryptocurrencyPriceSentiments.models.sentiment_analysis.PriceChangeDbEntity;
 import CryptocurrencyPriceSentiments.services.AsyncTasks;
 import CryptocurrencyPriceSentiments.services.DataCollection;
 import CryptocurrencyPriceSentiments.services.HypothesisTest;

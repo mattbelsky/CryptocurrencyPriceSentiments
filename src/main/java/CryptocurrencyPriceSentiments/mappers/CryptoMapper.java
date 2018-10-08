@@ -1,4 +1,4 @@
-package CryptocurrencyPriceSentiments;
+package CryptocurrencyPriceSentiments.mappers;
 
 import CryptocurrencyPriceSentiments.models.WatsonTone;
 import CryptocurrencyPriceSentiments.models.sentiment_analysis.CurrencySentiment;

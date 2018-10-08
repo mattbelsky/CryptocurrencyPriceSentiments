@@ -1,6 +1,6 @@
 package CryptocurrencyPriceSentiments.services;
 
-import CryptocurrencyPriceSentiments.CryptoMapper;
+import CryptocurrencyPriceSentiments.mappers.CryptoMapper;
 import CryptocurrencyPriceSentiments.TimePeriod;
 import CryptocurrencyPriceSentiments.exceptions.TableEmptyException;
 import CryptocurrencyPriceSentiments.models.sentiment_analysis.CurrencySentiment;

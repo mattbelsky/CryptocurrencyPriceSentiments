@@ -1,7 +1,7 @@
 package CryptocurrencyPriceSentiments;
 
+import CryptocurrencyPriceSentiments.mappers.CryptoMapper;
 import CryptocurrencyPriceSentiments.services.DataCollection;
-import CryptocurrencyPriceSentiments.services.SentimentAnalysis;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
